@@ -1,0 +1,8 @@
+gspread-pandas
+flask
+pandas
+numpy
+python-dotenv
+sqlalchemy
+pymysql
+git+https://github.com/TBA-API/tba-api-client-python
