@@ -1,0 +1,15 @@
+{
+  "TeamDataConfig": {
+    "Year": "2020",
+    "Attributes": {
+      "PowerCells": "Column(Integer)"
+    }
+  },
+  "MatchDataConfig": {
+    "Year": "2020",
+    "Attributes": {
+      "TotalPowerCells": "Column(Integer)"
+    }
+  }
+
+}
