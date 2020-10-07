@@ -275,7 +275,7 @@ class DataInput:
             json.dump(originalConfig, f, indent=4)
 
         gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')
-        self.sheet = gc.open("Scouting Data Collection (Responses)").get_worksheet(0)
+        self.sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
         for d in drop_list:
