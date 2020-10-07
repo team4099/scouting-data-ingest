@@ -8,7 +8,7 @@ Create a new folder in the directory called config
 
 Inside this folder you should have 3 files: config.json, SQLconfig.json, and a google service account credentials file
 
-### Config.json
+### config.json
 
 Your config file should look like this:
 
