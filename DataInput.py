@@ -76,7 +76,6 @@ class DataInput:
         # Reads config files and sets up variables and SQL from them
         self.config = {}
         self.parseConfig()
-        self.parseSQLConfig()
 
         # Creates everything and puts into SQL
         Base.metadata.create_all(self.engine)
@@ -155,36 +154,28 @@ class DataInput:
         (ret,), = self.session.query(exists().where(obj.id == id))
         return ret
 
-    def parseSQLConfig(self):
-        try:
+    def parseSQLConfig(self, SQLconfig):
+        t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
+                  "__table_args__": {'extend_existing': True},
+                  "id": Column(Integer, primary_key=True),
+                  "teamid": Column(String(50), ForeignKey('team.id'))}
 
-            with open('config/SQLconfig.json') as f:
-                SQLconfig = json.load(f)
+        SQLconfig['TeamDataConfig']['Attributes'] = {k: eval(v) for k, v in
+                                                     SQLconfig['TeamDataConfig']['Attributes'].items()}
+        self.TeamDataObject = type(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}', (Base,),
+                                   {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
+        Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
 
-            t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
-                      "__table_args__": {'extend_existing': True},
-                      "id": Column(Integer, primary_key=True),
-                      "teamid": Column(String(50), ForeignKey('team.id'))}
+        m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
+                  "__table_args__": {'extend_existing': True},
+                  "id": Column(Integer, primary_key=True),
+                  "matchId": Column(String(50), ForeignKey('match.id'))}
 
-            SQLconfig['TeamDataConfig']['Attributes'] = {k: eval(v) for k, v in
-                                                         SQLconfig['TeamDataConfig']['Attributes'].items()}
-            self.TeamDataObject = type(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}', (Base,),
-                                       {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
-            Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
-
-            m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
-                      "__table_args__": {'extend_existing': True},
-                      "id": Column(Integer, primary_key=True),
-                      "matchId": Column(String(50), ForeignKey('match.id'))}
-
-            SQLconfig['MatchDataConfig']['Attributes'] = {k: eval(v) for k, v in
-                                                          SQLconfig['MatchDataConfig']['Attributes'].items()}
-            self.MatchDataObject = type(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', (Base,),
-                                        {**SQLconfig['MatchDataConfig']['Attributes'], **m_data})
-            Matches.data_list = relationship(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False)
-
-        except FileNotFoundError:
-            pass
+        SQLconfig['MatchDataConfig']['Attributes'] = {k: eval(v) for k, v in
+                                                      SQLconfig['MatchDataConfig']['Attributes'].items()}
+        self.MatchDataObject = type(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', (Base,),
+                                    {**SQLconfig['MatchDataConfig']['Attributes'], **m_data})
+        Matches.data_list = relationship(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False)
 
     def getTBAData(self, event: str):
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
@@ -269,11 +260,6 @@ class DataInput:
             else:
                 warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
 
-        originalConfig = json.load(open('./config/SQLconfig.json', 'r'))
-        with open('./config/SQLconfig.json', 'w') as f:
-            originalConfig['MatchDataConfig']['Attributes'] = matchDataConfig
-            json.dump(originalConfig, f, indent=4)
-
         gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')
         self.sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
         data = pd.DataFrame(self.sheet.get_all_records())
@@ -298,10 +284,18 @@ class DataInput:
             else:
                 warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
 
-        originalConfig = json.load(open('./config/SQLconfig.json', 'r'))
-        with open('./config/SQLconfig.json', 'w') as f:
-            originalConfig['TeamDataConfig']['Attributes'] = teamDataConfig
-            json.dump(originalConfig, f, indent=4)
+        SQLConfig = {
+            "TeamDataConfig": {
+                "Year": config["Year"],
+                "Attributes": teamDataConfig
+            },
+            "MatchDataConfig": {
+                "Year": config["Year"],
+                "Attributes": matchDataConfig
+            }
+        }
+
+        self.parseSQLConfig(SQLConfig)
 
 
 d = DataInput()
