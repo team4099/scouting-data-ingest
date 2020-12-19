@@ -1,2 +1,2 @@
 class DataProcessor:
-    # TODO: Get from old Laptop
+    def __init__(self):
