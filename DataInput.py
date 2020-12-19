@@ -14,6 +14,7 @@ from datetime import datetime
 # Setting Up SQL
 Base = declarative_base()
 
+
 association_red_table = Table('red_association', Base.metadata,
                               Column('team_id', String(50), ForeignKey('team.id')),
                               Column('match_id', String(50), ForeignKey('match.id'))
@@ -57,7 +58,12 @@ class MatchData(Base):
 # Main Input Object that will handle all the input
 class DataInput:
     def __init__(self):
-        self.engine = create_engine('mysql+pymysql://root:robotics4099@localhost/scouting')
+        with open('config/config.json') as f:
+            config = json.load(f)
+
+        self.config = config
+
+        self.engine = create_engine(f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
         self.Sessiontemplate = sessionmaker()
         self.Sessiontemplate.configure(bind=self.engine)
         self.session = self.Sessiontemplate()
@@ -74,7 +80,6 @@ class DataInput:
         self.sheet = None
 
         # Reads config files and sets up variables and SQL from them
-        self.config = {}
         self.parseConfig()
 
         # Creates everything and puts into SQL
@@ -226,13 +231,9 @@ class DataInput:
             else:
                 warnings.warn("This TeamData already exists. It will not be added.")
         self.session.commit()
-        self.sheetLastModified = datetime.strptime(data.iloc[-1:]['Timestamp'][0], '%m/%d/%Y %H:%M:%S')
+        self.sheetLastModified = datetime.strptime(data.iloc[-1:]['Timestamp'].iloc[0], '%m/%d/%Y %H:%M:%S')
 
     def parseConfig(self):
-        with open('config/config.json') as f:
-            config = json.load(f)
-
-        self.config = config
 
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}vahay/matches',
@@ -260,8 +261,8 @@ class DataInput:
             else:
                 warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
 
-        gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')
-        self.sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
+        gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
+        self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
         for d in drop_list:
@@ -286,11 +287,11 @@ class DataInput:
 
         SQLConfig = {
             "TeamDataConfig": {
-                "Year": config["Year"],
+                "Year": self.config["Year"],
                 "Attributes": teamDataConfig
             },
             "MatchDataConfig": {
-                "Year": config["Year"],
+                "Year": self.config["Year"],
                 "Attributes": matchDataConfig
             }
         }
