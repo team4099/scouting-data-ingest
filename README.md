@@ -6,7 +6,7 @@ Ingest scouting data from TBA and scouts and transfer it to Tableau and other vi
 
 Create a new folder in the directory called config
 
-Inside this folder you should have 3 files: config.json, SQLconfig.json, and a google service account credentials file
+Inside this folder you should have 2 files: config.json and a google service account credentials file
 
 ### config.json
 
@@ -17,29 +17,12 @@ Your config file should look like this:
   "TBA-Key": "[Include your TBA API key here]",
   "Year":"2020",
   "Google-Credentials": "[Include the name of your google service account credentials file here]",
-  "Spreadsheet": "[Include the name of the spreadsheet to use here]"
+  "Spreadsheet": "[Include the name of the spreadsheet to use here]",
+  "Database User": "[User]",
+  "Database Password": "[Password]"
 }
 ```
 
-### SQLconfig.json
-
-This file contains the configuration for the MySQL Database. Attributes is where the column configuration will be saved.
-
-```json
-{
-    "TeamDataConfig": {
-        "Year": "2020",
-        "Attributes": {
-        }
-    },
-    "MatchDataConfig": {
-        "Year": "2020",
-        "Attributes": {
-        }
-    }
-}
-
-```
 
 ### Google Service Account Credentials File
 
