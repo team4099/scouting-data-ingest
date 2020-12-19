@@ -1,6 +1,27 @@
 # scouting-data-ingest
 Ingest scouting data from TBA and scouts and transfer it to Tableau and other visualizations
 
+## Set Up
+
+Firstly, clone this project with: 
+
+```
+git clone https://github.com/team4099/scouting-data-ingest.git
+
+```
+
+This will create a folder with the Data Ingest App inside. Move into this folder and then make a python venv with:
+
+```
+python -m venv ./venv
+```
+
+Install needed packages with:
+
+```
+pip install -r requirements.txt
+```
+
 
 ## Configuration
 
@@ -26,6 +47,4 @@ Your config file should look like this:
 
 ### Google Service Account Credentials File
 
-You will need a Google Service Account to use this. Make one in the Google Developer Console and give it Drive and Sheets API Access. 
-Create service account credentials in the Credentials section. Download the file and keep it safe. Place the file in the config directory. Change the corresponding name
-in config.json. Make sure to share your spreadsheet with the service account's email.
+You will need a Google Service Account to use this. Ask to be added to the project on Google Developer console. Once added, navigate to the credentials page and click on the service account. Move to the details tab and add a new json key. Download the file and move into the config folder. In config.json, replace the Google Credentials value with the name of your file.
