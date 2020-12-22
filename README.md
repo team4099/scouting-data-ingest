@@ -34,6 +34,8 @@ Install needed packages with:
 pip install -r requirements.txt
 ```
 
+### MySQL Setup
+
 Now open the MySQL Shell application. This will have been installed with MySQL, you can open however you open apps on your computer.
 
 
