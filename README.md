@@ -87,3 +87,30 @@ If you have a Python IDE, just run DataInput.py in the IDE.
 
 If you do not have a Python IDE, open Command Line/Terminal and navigate back to the scouting-data-ingest folder. 
 Type ``python -m DataInput.py``
+
+## Tableau Setup
+
+To properly use the data, you need to do a bit of setting up in Tableau.
+
+Open up Tableau. On the blue Connect bar on the left, select MySQL under the To A Server section.
+
+In the MySQL Dialog, Server should be "localhost" (without the quotes), Database should be "scouting", and fill in your user name and password. Click Sign in.
+
+You will now see this. 
+![Tableau Data](./Images/Tableau_01.PNG)
+
+Drag matchdata2020 over to the workspace. Click Update Now to see the data.
+![Tableau Data Step 2](./Images/Tableau_02.PNG)
+
+We now need to associate a match with the teams in it. Click New Union on the left hand bar, under the all the tables.
+Drag the red_association and blue_association tables in. 
+![Tableau Data Step 3](./Images/Tableau_03.PNG)
+
+Click Apply and then OK. You will now need to match the corresponding fields. Search for the "Key" value in the matchdata2020 side, and the match_id value on the right side with the Union. Select both and then close the dialog.
+![Tableau Data Step 4](./Images/Tableau_04.PNG)
+
+Now we need to link Team Data. Drag the teamdata2020 table **to the right of the Union in the workspace**. Select team_id for the Union on the left in the new dialog, and the Teamid field on the right for teamdata2020. Close the dialog.
+![Tableau Data Step 5](./Images/Tableau_05.PNG)
+Congrats! You've finished setup. Go to your worksheet using the navigation bar at the bottom, and have some fun!
+
+Do know that this is under development and as such data and processes may change. Stay up to date by reviewing this README and watching for new updates.
