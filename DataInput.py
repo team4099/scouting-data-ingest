@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, Table, exists
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, BigInteger, ForeignKey, Integer, String, Boolean, Float
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.sql import text
 import json
 import numpy
 import requests
@@ -13,7 +14,6 @@ from datetime import datetime
 
 # Setting Up SQL
 Base = declarative_base()
-
 
 association_red_table = Table('red_association', Base.metadata,
                               Column('team_id', String(50), ForeignKey('team.id')),
@@ -63,10 +63,18 @@ class DataInput:
 
         self.config = config
 
-        self.engine = create_engine(f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
+        self.engine = create_engine(
+            f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
         self.Sessiontemplate = sessionmaker()
         self.Sessiontemplate.configure(bind=self.engine)
         self.session = self.Sessiontemplate()
+        self.connection = self.engine.connect()
+        tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`", "team_data",
+                  f"teamdata{self.config['Year']}", "team", ]
+        for t in tables:
+            tex = text(f"drop table if exists {t}")
+            self.connection.execute(tex)
+        self.session.commit()
 
         # Exists so as to use a year specific object types
         self.TeamDataObject = TeamData
