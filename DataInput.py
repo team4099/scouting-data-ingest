@@ -287,7 +287,7 @@ class DataInput:
             elif dtype == numpy.int64:
                 teamDataConfig[col] = f'Column(Integer)'
             elif dtype == numpy.object:
-                teamDataConfig[col] = f'Column(String(100))'
+                teamDataConfig[col] = f'Column(String(1000))'
             elif dtype == numpy.bool:
                 teamDataConfig[col] = f'Column(Boolean())'
             else:
