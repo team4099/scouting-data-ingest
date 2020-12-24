@@ -1,7 +1,7 @@
 import gspread
-from sqlalchemy import create_engine, Table, exists
+from sqlalchemy import create_engine, Table, exists, null
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, BigInteger, ForeignKey, Integer, String, Boolean, Float
+from sqlalchemy import Column, BigInteger, ForeignKey, Integer, String, Boolean, Float, Text
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.sql import text
 import json
@@ -58,17 +58,21 @@ class MatchData(Base):
 # Main Input Object that will handle all the input
 class DataInput:
     def __init__(self):
+        # Loading configuration
         with open('config/config.json') as f:
             config = json.load(f)
 
         self.config = config
 
+        # Connecting to MySQL
         self.engine = create_engine(
             f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
         self.Sessiontemplate = sessionmaker()
         self.Sessiontemplate.configure(bind=self.engine)
         self.session = self.Sessiontemplate()
         self.connection = self.engine.connect()
+
+        # Erasing old data to ensure proper column set up
         tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`", "team_data",
                   f"teamdata{self.config['Year']}", "team", ]
         for t in tables:
@@ -76,7 +80,7 @@ class DataInput:
             self.connection.execute(tex)
         self.session.commit()
 
-        # Exists so as to use a year specific object types
+        # Exists to use a year specific object types
         self.TeamDataObject = TeamData
         self.MatchDataObject = MatchData
 
@@ -146,11 +150,20 @@ class DataInput:
 
             :returns: Boolean
         """
-        (ret,), = self.session.query(
-            exists().where(self.TeamDataObject.teamid == team_id).where(self.TeamDataObject.Match_Key == match_key))
+        with self.session.no_autoflush:
+            (ret,), = self.session.query(
+                exists().where(self.TeamDataObject.teamid == team_id).where(self.TeamDataObject.Match_Key == match_key))
         return ret
 
     def getTeamData(self, team_id, match_key):
+        """
+            Gets a team data object if it exists in the database. If it does not, it will return None and print a warning.
+
+            :param team_id: The team id of the wanted team
+            :param id: The match key
+
+            :returns: Team Data Object
+        """
         if self.checkIfTeamDataExists(team_id, match_key):
             return self.session.query(self.TeamDataObject).filter(self.TeamDataObject.teamid == team_id,
                                                                   self.TeamDataObject.Match_Key == match_key)[0]
@@ -158,12 +171,27 @@ class DataInput:
             warnings.warn('Team Data does not exist')
 
     def getMatch(self, id):
+        """
+            Gets a match if it exists in the database. If it does not, it will return None and print a warning.
+
+            :param id: The match key
+
+            :returns: Match
+        """
         if self.checkIfExists(Matches, id):
             return self.session.query(Matches).filter_by(id=id)[0]
         else:
             warnings.warn('Match does not exist')
 
     def checkIfExists(self, obj, id):
+        """
+            Checks if an object exists in the database.
+
+            :param obj: Object type wanted
+            :param id: id of object
+
+            :returns: Boolean
+        """
         (ret,), = self.session.query(exists().where(obj.id == id))
         return ret
 
@@ -217,10 +245,11 @@ class DataInput:
 
         return r.status_code
 
-    def getSheetData(self):
-        # TODO: Add time checking
+    def getSheetData(self,eventName):
         data = pd.DataFrame(self.sheet.get_all_records())
-        data = data.infer_objects()
+        data = data.replace(r'^\s*$', numpy.nan, regex=True)
+        data.astype(data.dropna().infer_objects().dtypes)
+        data = data.replace(numpy.nan, null(), regex=True)
         data.columns = [i.replace(" ", "_") for i in data.columns]
         if self.sheetLastModified is None:
             pass
@@ -233,6 +262,7 @@ class DataInput:
                     x = x.drop(labels=[d])
                 except KeyError:
                     pass
+            x['Match_Key'] = eventName + '_' + x['Match_Key']
             if not self.checkIfTeamDataExists(f'frc{row[1]["Team_Number"]}', x['Match_Key']):
                 t = self.TeamDataObject(teamid=f'frc{row[1]["Team_Number"]}', **x.to_dict())
                 self.session.add(t)
@@ -279,20 +309,18 @@ class DataInput:
             except KeyError:
                 pass
         data.columns = [i.replace(" ", "_") for i in data.columns]
-        data = data.infer_objects()
+        data = data.replace(r'^\s*$', numpy.nan , regex=True)
+        data.astype(data.dropna().infer_objects().dtypes)
         teamDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
-            if dtype == numpy.float64:
-                teamDataConfig[col] = f'Column(Float)'
-            elif dtype == numpy.int64:
-                teamDataConfig[col] = f'Column(Integer)'
+            if dtype == numpy.int64 or dtype == numpy.float64:
+                teamDataConfig[col] = f'Column(Float())'
             elif dtype == numpy.object:
-                teamDataConfig[col] = f'Column(String(1000))'
+                teamDataConfig[col] = f'Column(Text(500))'
             elif dtype == numpy.bool:
                 teamDataConfig[col] = f'Column(Boolean())'
             else:
                 warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
-
         SQLConfig = {
             "TeamDataConfig": {
                 "Year": self.config["Year"],
@@ -309,4 +337,4 @@ class DataInput:
 
 d = DataInput()
 d.getTBAData('2020vahay')
-d.getSheetData()
+d.getSheetData('2020vahay')
