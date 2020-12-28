@@ -8,9 +8,12 @@ import json
 import numpy
 import requests
 import pandas as pd
-from time import time_ns
-import warnings
+from warnings import filterwarnings, warn
 from datetime import datetime
+from terminal import console
+
+# Get rid of warnings
+filterwarnings('ignore',module='sqlalchemy')
 
 # Setting Up SQL
 Base = declarative_base()
@@ -58,46 +61,53 @@ class MatchData(Base):
 # Main Input Object that will handle all the input
 class DataInput:
     def __init__(self):
-        # Loading configuration
-        with open('config/config.json') as f:
-            config = json.load(f)
+        with console.status("[bold green]Starting up...") as status:
+            # Loading configuration
+            console.log("Loading Configuration")
+            with open('config/config.json') as f:
+                config = json.load(f)
 
-        self.config = config
+            self.config = config
 
-        # Connecting to MySQL
-        self.engine = create_engine(
-            f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
-        self.Sessiontemplate = sessionmaker()
-        self.Sessiontemplate.configure(bind=self.engine)
-        self.session = self.Sessiontemplate()
-        self.connection = self.engine.connect()
+            # Connecting to MySQL
+            console.log("Connecting to MySQL")
+            self.engine = create_engine(
+                f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
+            self.Sessiontemplate = sessionmaker()
+            self.Sessiontemplate.configure(bind=self.engine)
+            self.session = self.Sessiontemplate()
+            self.connection = self.engine.connect()
 
-        # Erasing old data to ensure proper column set up
-        tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`", "team_data",
-                  f"teamdata{self.config['Year']}", "team", ]
-        for t in tables:
-            tex = text(f"drop table if exists {t}")
-            self.connection.execute(tex)
-        self.session.commit()
+            # Erasing old data to ensure proper column set up
+            console.log("Erasing Data")
+            tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`", "team_data",
+                      f"teamdata{self.config['Year']}", "team", ]
+            for t in tables:
+                tex = text(f"drop table if exists {t}")
+                self.connection.execute(tex)
+            self.session.commit()
 
-        # Exists to use a year specific object types
-        self.TeamDataObject = TeamData
-        self.MatchDataObject = MatchData
+            # Exists to use a year specific object types
+            console.log("Initializing Variables")
+            self.TeamDataObject = TeamData
+            self.MatchDataObject = MatchData
 
-        # Set as early as possible to make sure the first TBA response on load will provide data
-        self.tbaLastModified = 'Wed, 1 Jan 100 00:00:01 GMT'
-        self.sheetLastModified = None
+            # Set as early as possible to make sure the first TBA response on load will provide data
+            self.tbaLastModified = 'Wed, 1 Jan 100 00:00:01 GMT'
+            self.sheetLastModified = None
 
-        # Object to represent worksheet
-        self.sheet = None
+            # Object to represent worksheet
+            self.sheet = None
 
-        # Reads config files and sets up variables and SQL from them
-        self.parseConfig()
+            # Reads config files and sets up variables and SQL from them
+            self.parseConfig()
 
-        # Creates everything and puts into SQL
-        Base.metadata.create_all(self.engine)
+            # Creates everything and puts into SQL
+            console.log("Creating ORM Objects")
+            Base.metadata.create_all(self.engine)
 
-        self.session.commit()
+            self.session.commit()
+            console.log("Finished")
 
     def addMatch(self, id: str, red_teams_num: list, blue_teams_num: list, data):
         """
@@ -111,10 +121,10 @@ class DataInput:
             :returns: None
         """
         if self.checkIfExists(Matches, id):
-            warnings.warn('Match already exists. It will not be added.')
+            warn('Match already exists. It will not be added.')
             return
         if len(red_teams_num) > 3 or len(blue_teams_num) > 3:
-            warnings.warn('Team list cannot be bigger than 3')
+            warn('Team list cannot be bigger than 3')
             return
         red_teams = [
             Teams(id=id) if not self.checkIfExists(Teams, id) else self.session.query(Teams).filter_by(id=id)[0]
@@ -139,7 +149,7 @@ class DataInput:
         if self.checkIfExists(Teams, id):
             return self.session.query(Teams).filter_by(id=id)[0]
         else:
-            warnings.warn('Team does not exist')
+            warn('Team does not exist')
 
     def checkIfTeamDataExists(self, team_id, match_key):
         """
@@ -168,7 +178,7 @@ class DataInput:
             return self.session.query(self.TeamDataObject).filter(self.TeamDataObject.teamid == team_id,
                                                                   self.TeamDataObject.Match_Key == match_key)[0]
         else:
-            warnings.warn('Team Data does not exist')
+            warn('Team Data does not exist')
 
     def getMatch(self, id):
         """
@@ -181,7 +191,7 @@ class DataInput:
         if self.checkIfExists(Matches, id):
             return self.session.query(Matches).filter_by(id=id)[0]
         else:
-            warnings.warn('Match does not exist')
+            warn('Match does not exist')
 
     def checkIfExists(self, obj, id):
         """
@@ -194,29 +204,6 @@ class DataInput:
         """
         (ret,), = self.session.query(exists().where(obj.id == id))
         return ret
-
-    def parseSQLConfig(self, SQLconfig):
-        t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
-                  "__table_args__": {'extend_existing': True},
-                  "id": Column(Integer, primary_key=True),
-                  "teamid": Column(String(50), ForeignKey('team.id'))}
-
-        SQLconfig['TeamDataConfig']['Attributes'] = {k: eval(v) for k, v in
-                                                     SQLconfig['TeamDataConfig']['Attributes'].items()}
-        self.TeamDataObject = type(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}', (Base,),
-                                   {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
-        Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
-
-        m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
-                  "__table_args__": {'extend_existing': True},
-                  "id": Column(Integer, primary_key=True),
-                  "matchId": Column(String(50), ForeignKey('match.id'))}
-
-        SQLconfig['MatchDataConfig']['Attributes'] = {k: eval(v) for k, v in
-                                                      SQLconfig['MatchDataConfig']['Attributes'].items()}
-        self.MatchDataObject = type(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', (Base,),
-                                    {**SQLconfig['MatchDataConfig']['Attributes'], **m_data})
-        Matches.data_list = relationship(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False)
 
     def getTBAData(self, event: str):
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
@@ -267,15 +254,17 @@ class DataInput:
                 t = self.TeamDataObject(teamid=f'frc{row[1]["Team_Number"]}', **x.to_dict())
                 self.session.add(t)
             else:
-                warnings.warn("This TeamData already exists. It will not be added.")
+                warn("This TeamData already exists. It will not be added.")
         self.session.commit()
         self.sheetLastModified = datetime.strptime(data.iloc[-1:]['Timestamp'].iloc[0], '%m/%d/%Y %H:%M:%S')
 
     def parseConfig(self):
 
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
+        console.log("Getting TBA Data")
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}vahay/matches',
                          headers=headers)
+        console.log("Cleaning and Preparing data")
         data = pd.json_normalize(r.json())
         drop_list = ['videos', 'score_breakdown', 'alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
                      'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
@@ -286,6 +275,7 @@ class DataInput:
             except KeyError:
                 pass
         data = data.infer_objects()
+        console.log("Constructing Configuration")
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.float64:
@@ -297,10 +287,11 @@ class DataInput:
             elif dtype == numpy.bool:
                 matchDataConfig[col] = f'Column(Boolean())'
             else:
-                warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
-
+                warn(f'{dtype} is not a configured datatype. It will not be used.')
+        console.log("Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
         self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
+        console.log("Cleaning and Preparing Data")
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
         for d in drop_list:
@@ -311,6 +302,7 @@ class DataInput:
         data.columns = [i.replace(" ", "_") for i in data.columns]
         data = data.replace(r'^\s*$', numpy.nan , regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
+        console.log("Constructing Configuration")
         teamDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.int64 or dtype == numpy.float64:
@@ -320,7 +312,7 @@ class DataInput:
             elif dtype == numpy.bool:
                 teamDataConfig[col] = f'Column(Boolean())'
             else:
-                warnings.warn(f'{dtype} is not a configured datatype. It will not be used.')
+                warn(f'{dtype} is not a configured datatype. It will not be used.')
         SQLConfig = {
             "TeamDataConfig": {
                 "Year": self.config["Year"],
@@ -331,8 +323,33 @@ class DataInput:
                 "Attributes": matchDataConfig
             }
         }
-
+        console.log("Configuring SQL")
         self.parseSQLConfig(SQLConfig)
+
+    def parseSQLConfig(self, SQLconfig):
+        console.log("Constructing TeamData Object")
+        t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
+                  "__table_args__": {'extend_existing': True},
+                  "id": Column(Integer, primary_key=True),
+                  "teamid": Column(String(50), ForeignKey('team.id'))}
+
+        SQLconfig['TeamDataConfig']['Attributes'] = {k: eval(v) for k, v in
+                                                     SQLconfig['TeamDataConfig']['Attributes'].items()}
+        self.TeamDataObject = type(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}', (Base,),
+                                   {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
+        Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
+
+        console.log("Constructing MatchData Object")
+        m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
+                  "__table_args__": {'extend_existing': True},
+                  "id": Column(Integer, primary_key=True),
+                  "matchId": Column(String(50), ForeignKey('match.id'))}
+
+        SQLconfig['MatchDataConfig']['Attributes'] = {k: eval(v) for k, v in
+                                                      SQLconfig['MatchDataConfig']['Attributes'].items()}
+        self.MatchDataObject = type(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', (Base,),
+                                    {**SQLconfig['MatchDataConfig']['Attributes'], **m_data})
+        Matches.data_list = relationship(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False)
 
 
 d = DataInput()
