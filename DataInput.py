@@ -351,7 +351,3 @@ class DataInput:
                                     {**SQLconfig['MatchDataConfig']['Attributes'], **m_data})
         Matches.data_list = relationship(f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False)
 
-
-d = DataInput()
-d.getTBAData('2020vahay')
-d.getSheetData('2020vahay')

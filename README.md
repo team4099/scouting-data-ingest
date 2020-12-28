@@ -86,7 +86,8 @@ DM me (ksam) for a Google Credentials key file. Download the file and place it i
 If you have a Python IDE, just run DataInput.py in the IDE.
 
 If you do not have a Python IDE, open Command Line/Terminal and navigate back to the scouting-data-ingest folder. 
-Type ``python -m DataInput.py``
+Type ``python -m main.py``
+If that does not work, type ``python -m main``
 
 ## Tableau Setup
 
