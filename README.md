@@ -115,3 +115,8 @@ Now we need to link Team Data. Drag the teamdata2020 table **to the right of the
 Congrats! You've finished setup. Go to your worksheet using the navigation bar at the bottom, and have some fun!
 
 Do know that this is under development and as such data and processes may change. Stay up to date by reviewing this README and watching for new updates.
+
+## Getting New Changes
+Open command line/Terminal and get to the scouting-data-ingest folder.
+If you use git on the command line/Terminal, type ``git pull``. You are done and can run the new changes.
+If you use GitHub Desktop, click the Fetch Origin button at the top.
