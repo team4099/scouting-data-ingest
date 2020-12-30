@@ -37,6 +37,12 @@ class DataProcessor:
         red_association = pd.read_sql_table('red_association', self.connection)
         blue_association = pd.read_sql_table('blue_association', self.connection)
 
+        matches = team_data_columns['Match_Key'].unique()
+        for match in matches:
+            for color, colored_data in match_data_columns.items():
+                if len(colored_data[colored_data['matchId'] == match].index) == 0:
+                    self.log.error(f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped")
+
         if team_weights is None:
             team_weights = [1 for i in range(
                 len([col for col in team_data_columns.columns if col != 'Match_Key' and col != 'teamid']))]
@@ -59,7 +65,8 @@ class DataProcessor:
         for color, data in match_data_columns.items():
             for index, row in data.iterrows():
                 curr_match_data = team_data_columns.loc[team_data_columns['Match_Key'] == row['matchId']]
-                if len(curr_match_data.index) == 0:
+                if len(curr_match_data.index) < 6:
+                    #self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
                     continue
 
                 if color == 'Red':
@@ -79,7 +86,7 @@ class DataProcessor:
 
                 if row['Sum'] != curr_alliance_data['Sum'].sum():
                     warning = f'For the {color} alliance in match {row["matchId"]}, the {", ".join([col for col in team_data_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])} columns do not equal the {", ".join([col for col in match_data_columns["Blue"].columns if col not in ["matchId", "teamid", "Sum"]])} columns'
-                    self.log.warning(warning)
+                    self.log.error(warning)
                     warnings.append(warning)
 
         return warnings
@@ -87,10 +94,17 @@ class DataProcessor:
     def checkSame(self, team_data_column, match_data_column, team_orders):  # series, series
         warnings = []
 
+        matches = team_data_column['Match_Key'].unique()
+        for match in matches:
+            for color, colored_data in match_data_column.items():
+                if len(colored_data[colored_data['matchId'] == match].index) == 0:
+                    self.log.warning(f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped.")
+
         for color, data in match_data_column.items():
             for index, row in data.iterrows():
                 curr_match_data = team_data_column.loc[team_data_column['Match_Key'] == row['matchId']]
-                if len(curr_match_data.index) == 0:
+                if len(curr_match_data.index) < 6:
+                    #self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
                     continue
 
                 if color == 'Red':
@@ -102,7 +116,7 @@ class DataProcessor:
                     curr_order = curr_order.loc[:, ['alliances.blue.team_keys.1', 'alliances.blue.team_keys.2',
                                                     'alliances.blue.team_keys.3']]
                 else:
-                    self.log.warning(f"Color {color} is not valid")
+                    self.log.error(f"Color {color} is not valid")
                     return warnings
                 curr_order = curr_order.T.rename(columns={curr_order.index[0]: "teamid"})
                 curr_match_data = pd.merge(curr_order, curr_match_data, on="teamid", how='inner')
@@ -115,13 +129,11 @@ class DataProcessor:
                 if len(comparison.index) > 0:
                     for index, r in comparison.iterrows():
                         warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]} is recorded as {r["self"]} while TBA has it as {r["other"]}'
-                        self.log.warning(warning)
+                        self.log.error(warning)
                         warnings.append(warning)
 
         return warnings
 
-    def checkExists(self, team_data_column, match_data_column):  # series, series
-        pass
 
     def checkKey(self, team_data_column):  # series
         warnings = []
