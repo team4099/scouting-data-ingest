@@ -8,16 +8,18 @@ from re import search
 
 class DataProcessor:
     def __init__(self):
-        console.log("[bold green]Setting Up DataProcessor")
+        self.log = logger
+
+        self.log.info("[bold green]Setting Up DataProcessor")
         # Loading configuration
-        console.log("Loading Configuration")
+        self.log.info("Loading Configuration")
         with open('config/config.json') as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        console.log("Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = create_engine(
             f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
         self.Sessiontemplate = sessionmaker()
@@ -25,11 +27,9 @@ class DataProcessor:
         self.session = self.Sessiontemplate()
         self.connection = self.engine.connect()
 
-        console.log("Initializing Variables")
+        self.log.info("Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
-
-        self.log = logger
 
     def checkEqualsByAlliance(self, team_data_columns, match_data_columns, team_weights=None,
                               match_weights=None):  # iterable of series, series
@@ -86,8 +86,6 @@ class DataProcessor:
 
     def checkSame(self, team_data_column, match_data_column, team_orders):  # series, series
         warnings = []
-        red_association = pd.read_sql_table('red_association', self.connection)
-        blue_association = pd.read_sql_table('blue_association', self.connection)
 
         for color, data in match_data_column.items():
             for index, row in data.iterrows():
@@ -139,15 +137,15 @@ class DataProcessor:
 
     def checkData(self):
         warnings = {}
-        console.log("[bold green]Validating Data...")
-        console.log("Loading Data")
+        self.log.info("[bold green]Validating Data...")
+        self.log.info("Loading Data")
         team_data = pd.read_sql_table(f"teamdata{self.config['Year']}", self.connection)
         match_data = pd.read_sql_table(f"matchdata{self.config['Year']}", self.connection)
 
-        console.log("Checking TeamData match keys")
+        self.log.info("Checking TeamData match keys")
         warnings['Match Key Violations'] = self.checkKey(team_data['Match_Key'])
 
-        console.log("Checking for Auto Power Cell Low Goal Violations")
+        self.log.info("Checking for Auto Power Cell Low Goal Violations")
         warnings['Auto Power Cell Low Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'Cells_scored_in_Low_Goal']],
             {
@@ -156,7 +154,7 @@ class DataProcessor:
             }
         )
 
-        console.log("Checking for Auto Power Cell High Goal Violations")
+        self.log.info("Checking for Auto Power Cell High Goal Violations")
         warnings['Auto Power Cell High Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'Cells_scored_in_High_Goal']],
             {
@@ -167,7 +165,7 @@ class DataProcessor:
             }
         )
 
-        console.log("Checking for Teleop Power Cell Low Goal Violations")
+        self.log.info("Checking for Teleop Power Cell Low Goal Violations")
         warnings['Teleop Power Cell Low Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'Low_Goal']],
             {
@@ -176,7 +174,7 @@ class DataProcessor:
             }
         )
 
-        console.log("Checking for Teleop Power Cell High Goal Violations")
+        self.log.info("Checking for Teleop Power Cell High Goal Violations")
         warnings['Teleop Power Cell High Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'High_Goal']],
             {
@@ -187,7 +185,7 @@ class DataProcessor:
             }
         )
 
-        console.log("Checking for Endgame Status Violations")
+        self.log.info("Checking for Endgame Status Violations")
         warnings['Endgame Status Violations'] = self.checkSame(
             team_data.loc[:, ['teamid', 'Match_Key', 'Climb_Type']],
             {

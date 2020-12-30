@@ -61,16 +61,19 @@ class MatchData(Base):
 # Main Input Object that will handle all the input
 class DataInput:
     def __init__(self):
-        console.log("[bold green]Starting up...")
+        # Get logger
+        self.log = logger
+
+        self.log.info("[bold green]Starting up...")
         # Loading configuration
-        console.log("Loading Configuration")
+        self.log.info("Loading Configuration")
         with open('config/config.json') as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        console.log("Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = create_engine(
             f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
         self.Sessiontemplate = sessionmaker()
@@ -79,7 +82,7 @@ class DataInput:
         self.connection = self.engine.connect()
 
         # Erasing old data to ensure proper column set up
-        console.log("Erasing Data")
+        self.log.info("Erasing Data")
         tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`",
                   "team_data",
                   f"teamdata{self.config['Year']}", "team", ]
@@ -89,7 +92,7 @@ class DataInput:
         self.session.commit()
 
         # Exists to use a year specific object types
-        console.log("Initializing Variables")
+        self.log.info("Initializing Variables")
         self.TeamDataObject = TeamData
         self.MatchDataObject = MatchData
 
@@ -103,15 +106,12 @@ class DataInput:
         # Reads config files and sets up variables and SQL from them
         self.parseConfig()
 
-        # Get logger
-        self.log = logger
-
         # Creates everything and puts into SQL
-        console.log("Creating ORM Objects")
+        self.log.info("Creating ORM Objects")
         Base.metadata.create_all(self.engine)
 
         self.session.commit()
-        console.log("Finished")
+        self.log.info("Finished")
 
     def addMatch(self, id: str, red_teams_num: list, blue_teams_num: list, data):
         """
@@ -210,16 +210,16 @@ class DataInput:
         return ret
 
     def getTBAData(self, event: str):
-        console.log("[bold green]Loading TBA Data...")
-        console.log("Getting Data")
+        self.log.info("[bold green]Loading TBA Data...")
+        self.log.info("Getting Data")
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{event}/matches', headers=headers)
         if r.status_code != 200:
-            console.log(f"Data not successfully retrieved with status code {r.status_code}")
+            self.log.info(f"Data not successfully retrieved with status code {r.status_code}")
             return r.status_code
-        console.log("Data successfully retrieved")
+        self.log.info("Data successfully retrieved")
         self.tbaLastModified = r.headers['Last-Modified']
-        console.log("Normalizing and Cleaning Data")
+        self.log.info("Normalizing and Cleaning Data")
         data = pd.json_normalize(r.json())
         drop_list = ['videos', 'score_breakdown']
         for d in drop_list:
@@ -227,7 +227,7 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 pass
-        console.log("Getting Datatypes")
+        self.log.info("Getting Datatypes")
         data = data.infer_objects()
         blue_keys = data['alliances.blue.team_keys']
         red_keys = data['alliances.red.team_keys']
@@ -245,20 +245,20 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 pass
-        console.log("Adding Matches")
+        self.log.info("Adding Matches")
         for row, r_key, b_key in zip(data.iterrows(), red_keys, blue_keys):
             x = row[1]
             self.addMatch(x['key'], r_key, b_key,
                           self.MatchDataObject(**x.to_dict()))
-        console.log("Finished.")
+        self.log.info("Finished.")
         return r.status_code
 
     def getSheetData(self, eventName):
-        console.log("[bold green]Getting sheet data...")
-        console.log("Getting Data")
+        self.log.info("[bold green]Getting sheet data...")
+        self.log.info("Getting Data")
         data = pd.DataFrame(self.sheet.get_all_records())
-        console.log("Data successfully retrieved")
-        console.log("Getting Datatypes")
+        self.log.info("Data successfully retrieved")
+        self.log.info("Getting Datatypes")
         data = data.replace(r'^\s*$', numpy.nan, regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
         data = data.replace(numpy.nan, null(), regex=True)
@@ -280,18 +280,18 @@ class DataInput:
                 self.session.add(t)
             else:
                 self.log.warning("This TeamData already exists. It will not be added.")
-        console.log("Commiting changes")
+        self.log.info("Commiting changes")
         self.session.commit()
         self.sheetLastModified = datetime.strptime(data.iloc[-1:]['Timestamp'].iloc[0], '%m/%d/%Y %H:%M:%S')
-        console.log("Finished.")
+        self.log.info("Finished.")
 
     def parseConfig(self):
 
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
-        console.log("Getting TBA Data")
+        self.log.info("Getting TBA Data")
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}vahay/matches',
                          headers=headers)
-        console.log("Cleaning and Preparing data")
+        self.log.info("Cleaning and Preparing data")
         data = pd.json_normalize(r.json())
         split_list = ['alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
                       'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
@@ -307,7 +307,7 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 passdata = data.infer_objects()
-        console.log("Constructing Configuration")
+        self.log.info("Constructing Configuration")
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.float64:
@@ -320,10 +320,10 @@ class DataInput:
                 matchDataConfig[col] = f'Column(Boolean())'
             else:
                 self.log.warning(f'{dtype} is not a configured datatype. It will not be used.')
-        console.log("Getting sheet data")
+        self.log.info("Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
         self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
-        console.log("Cleaning and Preparing Data")
+        self.log.info("Cleaning and Preparing Data")
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
         for d in drop_list:
@@ -334,7 +334,7 @@ class DataInput:
         data.columns = [i.replace(" ", "_") for i in data.columns]
         data = data.replace(r'^\s*$', numpy.nan, regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
-        console.log("Constructing Configuration")
+        self.log.info("Constructing Configuration")
         teamDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.int64 or dtype == numpy.float64:
@@ -355,11 +355,11 @@ class DataInput:
                 "Attributes": matchDataConfig
             }
         }
-        console.log("Configuring SQL")
+        self.log.info("Configuring SQL")
         self.parseSQLConfig(SQLConfig)
 
     def parseSQLConfig(self, SQLconfig):
-        console.log("Constructing TeamData Object")
+        self.log.info("Constructing TeamData Object")
         t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
                   "__table_args__": {'extend_existing': True},
                   "id": Column(Integer, primary_key=True),
@@ -371,7 +371,7 @@ class DataInput:
                                    {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
         Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
 
-        console.log("Constructing MatchData Object")
+        self.log.info("Constructing MatchData Object")
         m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
                   "__table_args__": {'extend_existing': True},
                   "id": Column(Integer, primary_key=True),
