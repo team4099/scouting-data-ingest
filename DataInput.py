@@ -231,11 +231,19 @@ class DataInput:
         data = data.infer_objects()
         blue_keys = data['alliances.blue.team_keys']
         red_keys = data['alliances.red.team_keys']
-        for d in ['alliances.blue.dq_team_keys', 'alliances.blue.team_keys', 'alliances.blue.surrogate_team_keys',
-                  'alliances.red.dq_team_keys', 'alliances.red.team_keys', 'alliances.red.surrogate_team_keys']:
+        split_list = ['alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
+                      'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
+                      'alliances.red.surrogate_team_keys']
+        for split_c in split_list:
+            data[[split_c + '.1', split_c + '.2', split_c + '.3']] = [[k[i] if i < len(k) else None for i in range(3)]
+                                                                      for k in data[split_c]]
+        drop_list = ['videos', 'score_breakdown','alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
+                      'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
+                      'alliances.red.surrogate_team_keys']
+        for d in drop_list:
             try:
-                data.drop(labels=[d],axis=1,inplace=True)
-            except KeyError as e:
+                data = data.drop(d, axis=1)
+            except KeyError:
                 pass
         console.log("Adding Matches")
         for row, r_key, b_key in zip(data.iterrows(), red_keys, blue_keys):
@@ -285,6 +293,12 @@ class DataInput:
                          headers=headers)
         console.log("Cleaning and Preparing data")
         data = pd.json_normalize(r.json())
+        split_list = ['alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
+                      'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
+                      'alliances.red.surrogate_team_keys']
+        for split_c in split_list:
+            data[[split_c + '.1', split_c + '.2', split_c + '.3']] = [[k[i] if i < len(k) else None for i in range(3)]
+                                                                      for k in data[split_c]]
         drop_list = ['videos', 'score_breakdown', 'alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
                      'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
                      'alliances.red.surrogate_team_keys']
@@ -292,8 +306,7 @@ class DataInput:
             try:
                 data = data.drop(d, axis=1)
             except KeyError:
-                pass
-        data = data.infer_objects()
+                passdata = data.infer_objects()
         console.log("Constructing Configuration")
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
