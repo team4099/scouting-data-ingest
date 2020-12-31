@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import create_engine, Table, exists, null
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from terminal import console, logger
 import pandas as pd
@@ -66,7 +66,7 @@ class DataProcessor:
             for index, row in data.iterrows():
                 curr_match_data = team_data_columns.loc[team_data_columns['Match_Key'] == row['matchId']]
                 if len(curr_match_data.index) < 6:
-                    #self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
+                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
                     continue
 
                 if color == 'Red':
@@ -98,13 +98,14 @@ class DataProcessor:
         for match in matches:
             for color, colored_data in match_data_column.items():
                 if len(colored_data[colored_data['matchId'] == match].index) == 0:
-                    self.log.warning(f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped.")
+                    self.log.warning(
+                        f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped.")
 
         for color, data in match_data_column.items():
             for index, row in data.iterrows():
                 curr_match_data = team_data_column.loc[team_data_column['Match_Key'] == row['matchId']]
                 if len(curr_match_data.index) < 6:
-                    #self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
+                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
                     continue
 
                 if color == 'Red':
@@ -128,12 +129,11 @@ class DataProcessor:
 
                 if len(comparison.index) > 0:
                     for index, r in comparison.iterrows():
-                        warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]} is recorded as {r["self"]} while TBA has it as {r["other"]}'
+                        warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]}\'s endgame status is recorded as {r["self"]} while TBA has it as {r["other"]}'
                         self.log.error(warning)
                         warnings.append(warning)
 
         return warnings
-
 
     def checkKey(self, team_data_column):  # series
         warnings = []
@@ -143,9 +143,6 @@ class DataProcessor:
                 self.log.warning(warning)
                 warnings.append(warning)
         return warnings
-
-    def checkCondition(self, column, condition, name):  # series
-        pass
 
     def checkData(self):
         warnings = {}
@@ -217,15 +214,15 @@ class DataProcessor:
                        ]
             },
             match_data.loc[:,
-                [
-                    'matchId',
-                    'alliances.red.team_keys.1',
-                    'alliances.red.team_keys.2',
-                    'alliances.red.team_keys.3',
-                    'alliances.blue.team_keys.1',
-                    'alliances.blue.team_keys.2',
-                    'alliances.blue.team_keys.3'
-                ]
+            [
+                'matchId',
+                'alliances.red.team_keys.1',
+                'alliances.red.team_keys.2',
+                'alliances.red.team_keys.3',
+                'alliances.blue.team_keys.1',
+                'alliances.blue.team_keys.2',
+                'alliances.blue.team_keys.3'
+            ]
             ]
         )
 
