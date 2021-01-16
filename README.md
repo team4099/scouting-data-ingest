@@ -36,8 +36,7 @@ pip install -r requirements.txt
 
 ### MySQL Setup
 
-Now open the MySQL Shell application. This will have been installed with MySQL, you can open however you open apps on your computer.
-
+Now open the MySQL Shell application by opening terminal and typing ```mysqlsh```. 
 
 To connect your database type:
 ```\connect --mysql user@localhost``` replacing user with your username. Use "root" as your username if you did not create another user.
