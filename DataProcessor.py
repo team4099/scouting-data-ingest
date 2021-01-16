@@ -148,8 +148,20 @@ class DataProcessor:
         warnings = {}
         self.log.info("[bold green]Validating Data...")
         self.log.info("Loading Data")
-        team_data = pd.read_sql_table(f"teamdata{self.config['Year']}", self.connection)
-        match_data = pd.read_sql_table(f"matchdata{self.config['Year']}", self.connection)
+        try:
+            team_data = pd.read_sql_table(f"teamdata{self.config['Year']}", self.connection)
+        except Exception as e:
+            self.log.info(f'Table teamdata{self.config["Year"]} not found, trying TeamData{self.config["Year"]}')
+            team_data = pd.read_sql_table(f"TeamData{self.config['Year']}", self.connection)
+            self.log.info(f'Table TeamData{self.config["Year"]} found')
+
+        try:
+            match_data = pd.read_sql_table(f"matchdata{self.config['Year']}", self.connection)
+        except Exception as e:
+            self.log.info(f'Table matchdata{self.config["Year"]} not found, trying MatchData{self.config["Year"]}')
+            match_data = pd.read_sql_table(f"MatchData{self.config['Year']}", self.connection)
+            self.log.info(f'Table MatchData{self.config["Year"]} found')
+
 
         self.log.info("Checking TeamData match keys")
         warnings['Match Key Violations'] = self.checkKey(team_data['Match_Key'])

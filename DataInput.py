@@ -140,7 +140,6 @@ class DataInput:
         m = Matches(id=id, red_teams=red_teams, blue_teams=blue_teams, data_list=data)
 
         self.session.add(m)
-        self.session.commit()
 
     def getTeam(self, id):
         """
@@ -250,6 +249,7 @@ class DataInput:
             x = row[1]
             self.addMatch(x['key'], r_key, b_key,
                           self.MatchDataObject(**x.to_dict()))
+        self.session.commit()
         self.log.info("Finished.")
         return r.status_code
 
