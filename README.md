@@ -54,8 +54,6 @@ Create a new folder in the directory called config
 
 Inside this folder you should have 2 files: config.json and a google service account credentials file
 
-### config.json
-
 Your config file should look like this:
 
 ```json
@@ -68,10 +66,15 @@ Your config file should look like this:
   "Database Password": "[Password]"
 }
 ```
+### TBA
 
 Get a TBA API Key by making an account [here](https://www.thebluealliance.com/account) and then creating an TBA API Read Key. The description can be anything. Paste the key into your config file. 
 
+### MySQL
+
 Database user and password should be the user and password for MySQL that you configured. If you did not configure a user, Database user should be root, and the password should be the password you entered.
+
+### Spreadsheet
 
 For 2020, the Spreadsheet value should be set to "Scouting Data Collection (Responses)", without the quotes.
 
