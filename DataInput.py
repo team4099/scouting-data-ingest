@@ -11,6 +11,7 @@ import pandas as pd
 from warnings import filterwarnings, warn
 from datetime import datetime
 from terminal import console, logger
+import re
 
 # Get rid of warnings
 filterwarnings('ignore', module='sqlalchemy')
@@ -245,6 +246,7 @@ class DataInput:
             except KeyError:
                 pass
         self.log.info("Adding Matches")
+        data = data.sort_values(by='actual_time')
         for row, r_key, b_key in zip(data.iterrows(), red_keys, blue_keys):
             x = row[1]
             self.addMatch(x['key'], r_key, b_key,
@@ -267,6 +269,7 @@ class DataInput:
             pass
         elif datetime.strptime(data.iloc[-1:]['Timestamp'][0], '%m/%d/%Y %H:%M:%S') > self.sheetLastModified:
             return
+        self.log.info("Adding Team Data")
         for row in data.iterrows():
             x = row[1]
             for d in ['Team_Number']:

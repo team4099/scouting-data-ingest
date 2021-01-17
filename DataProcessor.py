@@ -83,6 +83,7 @@ class DataProcessor:
                     ]
                 else:
                     self.log.warning(f"Color {color} is not valid")
+                    return
 
                 if row['Sum'] != curr_alliance_data['Sum'].sum():
                     warning = f'For the {color} alliance in match {row["matchId"]}, the {", ".join([col for col in team_data_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])} columns do not equal the {", ".join([col for col in match_data_columns["Blue"].columns if col not in ["matchId", "teamid", "Sum"]])} columns'
@@ -208,7 +209,7 @@ class DataProcessor:
 
         self.log.info("Checking for Endgame Status Violations")
         warnings['Endgame Status Violations'] = self.checkSame(
-            team_data.loc[:, ['teamid', 'Match_Key', 'Climb_Type']],
+            team_data.loc[:, ['teamid', 'Match_Key', 'Climb_Type']].replace(pd.NA,'Unknown').replace('No Climb','None'),
             {
                 'Blue': match_data.loc[:, [
                                               'matchId',
