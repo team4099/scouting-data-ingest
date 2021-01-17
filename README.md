@@ -63,7 +63,8 @@ Your config file should look like this:
   "Google-Credentials": "[Include the name of your google service account credentials file here]",
   "Spreadsheet": "[Include the name of the spreadsheet to use here]",
   "Database User": "[User]",
-  "Database Password": "[Password]"
+  "Database Password": "[Password]",
+  "Event": "[Include the current event here]"
 }
 ```
 ### TBA
@@ -82,6 +83,9 @@ For 2020, the Spreadsheet value should be set to "Scouting Data Collection (Resp
 
 DM me (ksam) for a Google Credentials key file. Download the file and place it in your config folder. Copy the **name** of the file with the file extension and paste it into the Google Credentials value for config.json.
 
+### Event
+
+For now, set the Event field to "vahay".
 
 ## Running the Program
 

@@ -7,29 +7,28 @@ from re import search
 
 
 class DataProcessor:
-    def __init__(self):
+    def __init__(self, session, engine, connection):
         self.log = logger
 
-        self.log.info("[bold green]Setting Up DataProcessor")
+        self.log.info("[bold green]Starting [bold purple]DataProcessor")
         # Loading configuration
-        self.log.info("Loading Configuration")
+        self.log.info("[bold purple]Loading Configuration")
         with open('config/config.json') as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        self.log.info("Connecting to MySQL")
-        self.engine = create_engine(
-            f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
-        self.Sessiontemplate = sessionmaker()
-        self.Sessiontemplate.configure(bind=self.engine)
-        self.session = self.Sessiontemplate()
-        self.connection = self.engine.connect()
+        self.log.info("[bold purple]Connecting to MySQL")
+        self.engine = engine
+        self.session = session
+        self.connection = connection
 
-        self.log.info("Initializing Variables")
+        self.log.info("[bold purple]Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
+
+        self.log.info("[bold purple]DataProcessor Loaded!")
 
     def checkEqualsByAlliance(self, team_data_columns, match_data_columns, team_weights=None,
                               match_weights=None):  # iterable of series, series
@@ -147,8 +146,8 @@ class DataProcessor:
 
     def checkData(self):
         warnings = {}
-        self.log.info("[bold green]Validating Data...")
-        self.log.info("Loading Data")
+        self.log.info("[bold purple]Validating Data")
+        self.log.info("[bold purple]Loading Data")
         try:
             team_data = pd.read_sql_table(f"teamdata{self.config['Year']}", self.connection)
         except Exception as e:
@@ -164,7 +163,7 @@ class DataProcessor:
             self.log.info(f'Table MatchData{self.config["Year"]} found')
 
 
-        self.log.info("Checking TeamData match keys")
+        self.log.info("[bold purple]Checking TeamData match keys")
         warnings['Match Key Violations'] = self.checkKey(team_data['Match_Key'])
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
@@ -176,7 +175,7 @@ class DataProcessor:
             }
         )
 
-        self.log.info("Checking for Auto Power Cell High Goal Violations")
+        self.log.info("[bold purple]Checking for Auto Power Cell High Goal Violations")
         warnings['Auto Power Cell High Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'Cells_scored_in_High_Goal']],
             {
@@ -187,7 +186,7 @@ class DataProcessor:
             }
         )
 
-        self.log.info("Checking for Teleop Power Cell Low Goal Violations")
+        self.log.info("[bold purple]Checking for Teleop Power Cell Low Goal Violations")
         warnings['Teleop Power Cell Low Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'Low_Goal']],
             {
@@ -196,7 +195,7 @@ class DataProcessor:
             }
         )
 
-        self.log.info("Checking for Teleop Power Cell High Goal Violations")
+        self.log.info("[bold purple]Checking for Teleop Power Cell High Goal Violations")
         warnings['Teleop Power Cell High Goal Violations'] = self.checkEqualsByAlliance(
             team_data.loc[:, ['teamid', 'Match_Key', 'High_Goal']],
             {
@@ -207,7 +206,7 @@ class DataProcessor:
             }
         )
 
-        self.log.info("Checking for Endgame Status Violations")
+        self.log.info("[bold purple]Checking for Endgame Status Violations")
         warnings['Endgame Status Violations'] = self.checkSame(
             team_data.loc[:, ['teamid', 'Match_Key', 'Climb_Type']].replace(pd.NA,'Unknown').replace('No Climb','None'),
             {

@@ -1,8 +1,8 @@
-from DataProcessor import DataProcessor
-from DataInput import DataInput
+from DataManager import DataManager
 
-di = DataInput()
-di.getTBAData('2020vahay')
-di.getSheetData('2020vahay')
-dp = DataProcessor()
-dp.checkData()
+try:
+    dm = DataManager()
+    dm.get_data()
+    dm.check_data()
+except Exception as e:
+    print(e)

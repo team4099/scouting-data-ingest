@@ -8,7 +8,7 @@ import json
 import numpy
 import requests
 import pandas as pd
-from warnings import filterwarnings, warn
+from warnings import filterwarnings
 from datetime import datetime
 from terminal import console, logger
 import re
@@ -61,29 +61,26 @@ class MatchData(Base):
 
 # Main Input Object that will handle all the input
 class DataInput:
-    def __init__(self):
+    def __init__(self, engine, session, connection):
         # Get logger
         self.log = logger
 
-        self.log.info("[bold green]Starting up...")
+        self.log.info("[bold green]Starting [bold yellow]DataInput")
         # Loading configuration
-        self.log.info("Loading Configuration")
+        self.log.info("[bold yellow]Loading Configuration")
         with open('config/config.json') as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        self.log.info("Connecting to MySQL")
-        self.engine = create_engine(
-            f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting')
-        self.Sessiontemplate = sessionmaker()
-        self.Sessiontemplate.configure(bind=self.engine)
-        self.session = self.Sessiontemplate()
-        self.connection = self.engine.connect()
+        self.log.info("[bold yellow]Connecting to MySQL")
+        self.engine = engine
+        self.session = session
+        self.connection = connection
 
         # Erasing old data to ensure proper column set up
-        self.log.info("Erasing Data")
+        self.log.info("[bold yellow]Erasing existing data")
         tables = ["blue_association", "match_data", f"matchdata{self.config['Year']}", "red_association", "`match`",
                   "team_data",
                   f"teamdata{self.config['Year']}", "team", ]
@@ -93,7 +90,7 @@ class DataInput:
         self.session.commit()
 
         # Exists to use a year specific object types
-        self.log.info("Initializing Variables")
+        self.log.info("[bold yellow]Initializing Variables")
         self.TeamDataObject = TeamData
         self.MatchDataObject = MatchData
 
@@ -108,11 +105,11 @@ class DataInput:
         self.parseConfig()
 
         # Creates everything and puts into SQL
-        self.log.info("Creating ORM Objects")
+        self.log.info("[bold yellow]Creating ORM Objects")
         Base.metadata.create_all(self.engine)
 
         self.session.commit()
-        self.log.info("Finished")
+        self.log.info("[bold yellow]DataInput Loaded!")
 
     def addMatch(self, id: str, red_teams_num: list, blue_teams_num: list, data):
         """
@@ -210,16 +207,15 @@ class DataInput:
         return ret
 
     def getTBAData(self, event: str):
-        self.log.info("[bold green]Loading TBA Data...")
-        self.log.info("Getting Data")
+        self.log.info("[bold yellow]Loading TBA Data")
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{event}/matches', headers=headers)
         if r.status_code != 200:
-            self.log.info(f"Data not successfully retrieved with status code {r.status_code}")
+            self.log.error(f"Data not successfully retrieved with status code {r.status_code}")
             return r.status_code
-        self.log.info("Data successfully retrieved")
+        self.log.info("[bold yellow]Data successfully retrieved")
         self.tbaLastModified = r.headers['Last-Modified']
-        self.log.info("Normalizing and Cleaning Data")
+        self.log.info("[bold yellow]Normalizing and Cleaning Data")
         data = pd.json_normalize(r.json())
         drop_list = ['videos', 'score_breakdown']
         for d in drop_list:
@@ -227,7 +223,7 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 pass
-        self.log.info("Getting Datatypes")
+        self.log.info("[bold yellow]Getting Datatypes")
         data = data.infer_objects()
         blue_keys = data['alliances.blue.team_keys']
         red_keys = data['alliances.red.team_keys']
@@ -245,22 +241,21 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 pass
-        self.log.info("Adding Matches")
+        self.log.info("[bold yellow]Adding Matches")
         data = data.sort_values(by='actual_time')
         for row, r_key, b_key in zip(data.iterrows(), red_keys, blue_keys):
             x = row[1]
             self.addMatch(x['key'], r_key, b_key,
                           self.MatchDataObject(**x.to_dict()))
         self.session.commit()
-        self.log.info("Finished.")
+        self.log.info("[bold yellow]Finished getting TBA Data.")
         return r.status_code
 
     def getSheetData(self, eventName):
-        self.log.info("[bold green]Getting sheet data...")
-        self.log.info("Getting Data")
+        self.log.info("[bold yellow]Getting sheet data")
         data = pd.DataFrame(self.sheet.get_all_records())
-        self.log.info("Data successfully retrieved")
-        self.log.info("Getting Datatypes")
+        self.log.info("[bold yellow]Data successfully retrieved")
+        self.log.info("[bold yellow]Getting Datatypes")
         data = data.replace(r'^\s*$', numpy.nan, regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
         data = data.replace(numpy.nan, null(), regex=True)
@@ -269,7 +264,7 @@ class DataInput:
             pass
         elif datetime.strptime(data.iloc[-1:]['Timestamp'][0], '%m/%d/%Y %H:%M:%S') > self.sheetLastModified:
             return
-        self.log.info("Adding Team Data")
+        self.log.info("[bold yellow]Adding Team Data")
         for row in data.iterrows():
             x = row[1]
             for d in ['Team_Number']:
@@ -283,18 +278,18 @@ class DataInput:
                 self.session.add(t)
             else:
                 self.log.warning("This TeamData already exists. It will not be added.")
-        self.log.info("Commiting changes")
+        self.log.info("[bold yellow]Commiting changes")
         self.session.commit()
         self.sheetLastModified = datetime.strptime(data.iloc[-1:]['Timestamp'].iloc[0], '%m/%d/%Y %H:%M:%S')
-        self.log.info("Finished.")
+        self.log.info("[bold yellow]Finished getting sheet data")
 
     def parseConfig(self):
 
         headers = {'X-TBA-Auth-Key': self.config['TBA-Key'], 'If-Modified-Since': self.tbaLastModified}
-        self.log.info("Getting TBA Data")
+        self.log.info("[bold yellow]Getting TBA Data")
         r = requests.get(f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}vahay/matches',
                          headers=headers)
-        self.log.info("Cleaning and Preparing data")
+        self.log.info("[bold yellow]Cleaning and Preparing data")
         data = pd.json_normalize(r.json())
         split_list = ['alliances.blue.dq_team_keys', 'alliances.blue.team_keys',
                       'alliances.blue.surrogate_team_keys', 'alliances.red.dq_team_keys', 'alliances.red.team_keys',
@@ -310,7 +305,7 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 passdata = data.infer_objects()
-        self.log.info("Constructing Configuration")
+        self.log.info("[bold yellow]Constructing Configuration")
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.float64:
@@ -323,10 +318,10 @@ class DataInput:
                 matchDataConfig[col] = f'Column(Boolean())'
             else:
                 self.log.warning(f'{dtype} is not a configured datatype. It will not be used.')
-        self.log.info("Getting sheet data")
+        self.log.info("[bold yellow]Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
         self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
-        self.log.info("Cleaning and Preparing Data")
+        self.log.info("[bold yellow]Cleaning and Preparing Data")
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
         for d in drop_list:
@@ -337,7 +332,7 @@ class DataInput:
         data.columns = [i.replace(" ", "_") for i in data.columns]
         data = data.replace(r'^\s*$', numpy.nan, regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
-        self.log.info("Constructing Configuration")
+        self.log.info("[bold yellow]Constructing Configuration")
         teamDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.int64 or dtype == numpy.float64:
@@ -358,11 +353,11 @@ class DataInput:
                 "Attributes": matchDataConfig
             }
         }
-        self.log.info("Configuring SQL")
+        self.log.info("[bold yellow]Configuring SQL")
         self.parseSQLConfig(SQLConfig)
 
     def parseSQLConfig(self, SQLconfig):
-        self.log.info("Constructing TeamData Object")
+        self.log.info("[bold yellow]Constructing TeamData Object")
         t_data = {"__tablename__": f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}',
                   "__table_args__": {'extend_existing': True},
                   "id": Column(Integer, primary_key=True),
@@ -374,7 +369,7 @@ class DataInput:
                                    {**SQLconfig['TeamDataConfig']['Attributes'], **t_data})
         Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
 
-        self.log.info("Constructing MatchData Object")
+        self.log.info("[bold yellow]Constructing MatchData Object")
         m_data = {"__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
                   "__table_args__": {'extend_existing': True},
                   "id": Column(Integer, primary_key=True),
