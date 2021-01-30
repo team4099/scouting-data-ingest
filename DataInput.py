@@ -256,6 +256,7 @@ class DataInput:
         self.tbaLastModified = r.headers["Last-Modified"]
         self.log.info("[bold yellow]Normalizing and Cleaning Data")
         data = pd.json_normalize(r.json())
+        data = data.sort_values(by="actual_time")
         drop_list = ["videos", "score_breakdown"]
         for d in drop_list:
             try:
@@ -294,7 +295,6 @@ class DataInput:
             except KeyError:
                 pass
         self.log.info("[bold yellow]Adding Matches")
-        data = data.sort_values(by="actual_time")
         for row, r_key, b_key in zip(data.iterrows(), red_keys, blue_keys):
             x = row[1]
             self.addMatch(x["key"], r_key, b_key, self.MatchDataObject(**x.to_dict()))
@@ -330,6 +330,15 @@ class DataInput:
             if not self.checkIfTeamDataExists(
                 f'frc{row[1]["Team_Number"]}', x["Match_Key"]
             ):
+                match = self.getMatch(x['Match_Key'])
+                red_teams = [int(team.id.lstrip('frc')) for team in match.red_teams]
+                blue_teams = [int(team.id.lstrip('frc')) for team in match.blue_teams]
+                if row[1]["Team_Number"] in red_teams:
+                    x["Alliance"] = "Red"
+                elif row[1]["Team_Number"] in blue_teams:
+                    x["Alliance"] = "Blue"
+                else:
+                    raise Exception(f"Invalid Team Number {row[1]['Team_Number']} in match {x['Match_Key']}")
                 t = self.TeamDataObject(
                     teamid=f'frc{row[1]["Team_Number"]}', **x.to_dict()
                 )
@@ -413,7 +422,9 @@ class DataInput:
         data = data.replace(r"^\s*$", numpy.nan, regex=True)
         data.astype(data.dropna().infer_objects().dtypes)
         self.log.info("[bold yellow]Constructing Configuration")
-        teamDataConfig = {}
+        teamDataConfig = {
+            "Alliance": "Column(Text(20))"
+        }
         for col, dtype in zip(data.columns, data.dtypes):
             if dtype == numpy.int64 or dtype == numpy.float64:
                 teamDataConfig[col] = f"Column(Float())"

@@ -108,15 +108,8 @@ You will now see this.
 Drag matchdata2020 over to the workspace. Click Update Now to see the data.
 ![Tableau Data Step 2](./Images/Tableau_02.PNG)
 
-We now need to associate a match with the teams in it. Click New Union on the left hand bar, under the all the tables.
-Drag the red_association and blue_association tables in. 
-![Tableau Data Step 3](./Images/Tableau_03.PNG)
-
-Click Apply and then OK. You will now need to match the corresponding fields. Search for the "Key" value in the matchdata2020 side, and the match_id value on the right side with the Union. Select both and then close the dialog.
-![Tableau Data Step 4](./Images/Tableau_04.PNG)
-
-Now we need to link Team Data. Drag the teamdata2020 table **to the right of the Union in the workspace**. Select team_id for the Union on the left in the new dialog, and the Teamid field on the right for teamdata2020. Close the dialog.
-![Tableau Data Step 5](./Images/Tableau_05.PNG)
+Now we need to link Team Data. Drag the teamdata2020 table **to the right of the Union in the workspace**. Select Key for the matchdata2020 on the left in the new dialog, and the Match Key field on the right for teamdata2020. Close the dialog.
+![Tableau Data Step 5](./Images/Tableau_06.PNG)
 Congrats! You've finished setup. Go to your worksheet using the navigation bar at the bottom, and have some fun!
 
 Do know that this is under development and as such data and processes may change. Stay up to date by reviewing this README and watching for new updates.
