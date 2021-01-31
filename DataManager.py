@@ -9,6 +9,7 @@ import json
 
 from DataInput import DataInput
 from DataProcessor import DataProcessor
+from DataAccessor import DataAccessor
 from terminal import console, logger
 from rich.syntax import Syntax
 
@@ -46,8 +47,9 @@ class DataManager:
         self.connection = self.engine.connect()
 
         self.log.info("[bold blue]Loading Components")
-        self.dataInput = DataInput(self.engine, self.session, self.connection)
-        self.dataProcessor = DataProcessor(self.engine, self.session, self.connection)
+        self.dataAccessor = DataAccessor(self.engine, self.session, self.connection)
+        self.dataInput = DataInput(self.engine, self.session, self.connection, self.dataAccessor)
+        self.dataProcessor = DataProcessor(self.engine, self.session, self.connection, self.dataAccessor)
 
         self.log.info("[bold blue]Loaded Scouting-Data-Ingest!")
 
@@ -59,8 +61,7 @@ class DataManager:
             return False
         elif (
             requests.get(
-                "https://www.thebluealliance.com/api/v3/status",
-                headers={"X-TBA-Auth-Key": self.config["TBA-Key"]},
+                "https://google.com"
             ).status_code
             == 401
         ):

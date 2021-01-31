@@ -7,7 +7,7 @@ from re import search
 
 
 class DataProcessor:
-    def __init__(self, session, engine, connection):
+    def __init__(self, engine, session, connection, dataAccessor):
         self.log = logger
 
         self.log.info("[bold green]Starting [bold purple]DataProcessor")
@@ -23,6 +23,7 @@ class DataProcessor:
         self.engine = engine
         self.session = session
         self.connection = connection
+        self.dataAccessor = dataAccessor
 
         self.log.info("[bold purple]Initializing Variables")
         self.warning_dict = {}
@@ -38,8 +39,6 @@ class DataProcessor:
         match_weights=None,
     ):  # iterable of series, series
         warnings = []
-        red_association = pd.read_sql_table("red_association", self.connection)
-        blue_association = pd.read_sql_table("blue_association", self.connection)
 
         matches = team_data_columns["Match_Key"].unique()
         for match in matches:
@@ -108,17 +107,13 @@ class DataProcessor:
                 if color == "Red":
                     curr_alliance_data = curr_match_data[
                         curr_match_data["teamid"].isin(
-                            red_association[
-                                red_association["match_id"] == row["matchId"]
-                            ]["team_id"]
+                            self.dataAccessor.getTeamData(match_key=row["matchId"], color="Red")["teamid"]
                         )
                     ]
                 elif color == "Blue":
                     curr_alliance_data = curr_match_data[
                         curr_match_data["teamid"].isin(
-                            blue_association[
-                                blue_association["match_id"] == row["matchId"]
-                            ]["team_id"]
+                            self.dataAccessor.getTeamData(match_key=row["matchId"], color="Blue")["teamid"]
                         )
                     ]
                 else:
@@ -155,31 +150,14 @@ class DataProcessor:
                     continue
 
                 if color == "Red":
-                    curr_order = team_orders[team_orders["matchId"] == row["matchId"]]
-                    curr_order = curr_order.loc[
-                        :,
-                        [
-                            "alliances.red.team_keys.1",
-                            "alliances.red.team_keys.2",
-                            "alliances.red.team_keys.3",
-                        ],
-                    ]
+                    curr_order = self.dataAccessor.getTeamData(match_key=row["matchId"], color="Red")[
+                        ['Driver_Station', 'teamid']].set_index('Driver_Station')
                 elif color == "Blue":
-                    curr_order = team_orders[team_orders["matchId"] == row["matchId"]]
-                    curr_order = curr_order.loc[
-                        :,
-                        [
-                            "alliances.blue.team_keys.1",
-                            "alliances.blue.team_keys.2",
-                            "alliances.blue.team_keys.3",
-                        ],
-                    ]
+                    curr_order = self.dataAccessor.getTeamData(match_key=row["matchId"], color="Blue")[
+                        ['Driver_Station', 'teamid']].set_index('Driver_Station')
                 else:
                     self.log.error(f"Color {color} is not valid")
                     return warnings
-                curr_order = curr_order.T.rename(
-                    columns={curr_order.index[0]: "teamid"}
-                )
                 curr_match_data = pd.merge(
                     curr_order, curr_match_data, on="teamid", how="inner"
                 )

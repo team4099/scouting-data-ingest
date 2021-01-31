@@ -241,3 +241,5 @@ fabric.properties
 .idea/
 .vscode/
 config/
+data/
+
