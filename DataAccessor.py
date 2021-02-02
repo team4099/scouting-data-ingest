@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from terminal import console, logger
 import pandas as pd
 from re import search
-from SQLObjects import Matches,MatchData,TeamData,Teams,Base
+from SQLObjects import Matches,Teams,Base
 
 #TODO: Fix Documentation
 class DataAccessor:
@@ -28,10 +28,17 @@ class DataAccessor:
         self.log.info("[bold purple]Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
-        self.TeamDataObject = TeamData
-        self.MatchDataObject = MatchData
+        self.TeamDataObject = None
+        self.MatchDataObject = None
+        self.CalculatedTeamDataObject = None
 
         self.log.info("[bold purple]DataAccessor Loaded!")
+
+    def getTeams(self, type_df:bool = True):
+        if type_df:
+            return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement,self.connection)['id'])
+        else:
+            return self.session.query(Teams)[:]
 
     def getTeamData(self, team_id:str = None, match_key:str = None, color:str = None, driver_station:int = None, type_df:bool = True):
         """
@@ -102,6 +109,7 @@ class DataAccessor:
         m = Teams(id=id)
 
         self.session.add(m)
+        self.session.commit()
 
     def addTeamData(self, id: str, match_key: str, data):
         """
@@ -120,6 +128,23 @@ class DataAccessor:
 
         self.session.add(m)
 
+    def addCalculatedTeamData(self, id: str, data):
+        """
+        Adds a team_data object to the database. Will prevent a team_data from being added if it already exists. Will not commit changes.
+
+        :param id: The team id
+        :param data: A year specific TeamData object for the match
+
+        :returns: None
+        """
+        #if self.checkIfCalculatedTeamDataExists(id):
+        #    self.log.warning("CalculatedTeamData already exists. It will not be added.")
+        #    return
+
+        m = self.CalculatedTeamDataObject(teamid=id, **data.to_dict())
+
+        self.session.add(m)
+
     def checkIfTeamDataExists(self, team_id, match_key):
         """
         Checks if a TeamData object exists.
@@ -134,6 +159,22 @@ class DataAccessor:
                 exists()
                 .where(self.TeamDataObject.teamid == team_id)
                 .where(self.TeamDataObject.Match_Key == match_key)
+            )
+        return ret
+
+    def checkIfCalculatedTeamDataExists(self, team_id):
+        """
+        Checks if a TeamData object exists.
+
+        :param team_id: The team key
+        :param match_key: The match key
+
+        :returns: Boolean
+        """
+        with self.session.no_autoflush:
+            ((ret,),) = self.session.query(
+                exists()
+                .where(self.CalculatedTeamDataObject.id == team_id)
             )
         return ret
 

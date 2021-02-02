@@ -19,12 +19,10 @@ import requests
 import pandas as pd
 from warnings import filterwarnings
 from datetime import datetime
+
 from terminal import console, logger
 import re
-from SQLObjects import Matches, MatchData, Teams, TeamData, Base
-
-# Get rid of warnings
-filterwarnings("ignore", module="sqlalchemy")
+from SQLObjects import Matches, Teams, Base
 
 
 # Main Input Object that will handle all the input
@@ -49,26 +47,12 @@ class DataInput:
         self.dataAccessor = dataAccessor
 
         # Erasing old data to ensure proper column set up
-        self.log.info("[bold yellow]Erasing existing data")
-        tables = [
-            "blue_association",
-            "match_data",
-            f"matchdata{self.config['Year']}",
-            "red_association",
-            "`match`",
-            "team_data",
-            f"teamdata{self.config['Year']}",
-            "team",
-        ]
-        for t in tables:
-            tex = text(f"drop table if exists {t}")
-            self.connection.execute(tex)
-        self.session.commit()
+
 
         # Exists to use a year specific object types
         self.log.info("[bold yellow]Initializing Variables")
-        self.TeamDataObject = TeamData
-        self.MatchDataObject = MatchData
+        self.TeamDataObject = None
+        self.MatchDataObject = None
 
         # Set as early as possible to make sure the first TBA response on load will provide data
         self.tbaLastModified = "Wed, 1 Jan 100 00:00:01 GMT"

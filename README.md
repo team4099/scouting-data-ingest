@@ -108,8 +108,12 @@ You will now see this.
 Drag matchdata2020 over to the workspace. Click Update Now to see the data.
 ![Tableau Data Step 2](./Images/Tableau_02.PNG)
 
-Now we need to link Team Data. Drag the teamdata2020 table **to the right of the Union in the workspace**. Select Key for the matchdata2020 on the left in the new dialog, and the Match Key field on the right for teamdata2020. Close the dialog.
-![Tableau Data Step 5](./Images/Tableau_06.PNG)
+Now we need to link Team Data. Drag the teamdata2020 table **to the right of matchdata2020 in the workspace**. Select Key for the matchdata2020 on the left in the new dialog, and the Match Key field on the right for teamdata2020. Close the dialog.
+![Tableau Data Step 3](./Images/Tableau_06.PNG)
+
+We also need to link the Calculated Team Data. Drag the calculatedteamdata2020 table **to the right of teamdata2020 in the workspace**. Select Teamid on both the left and right boxes. Close the dialog.
+![Tableau Data Step 4](./Images/Tableau_07.PNG)
+
 Congrats! You've finished setup. Go to your worksheet using the navigation bar at the bottom, and have some fun!
 
 Do know that this is under development and as such data and processes may change. Stay up to date by reviewing this README and watching for new updates.

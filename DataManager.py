@@ -3,10 +3,11 @@ import os
 import gspread
 import pymysql
 import requests
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import json
 
+from DataCalculator import DataCalculator
 from DataInput import DataInput
 from DataProcessor import DataProcessor
 from DataAccessor import DataAccessor
@@ -15,7 +16,7 @@ from rich.syntax import Syntax
 
 
 class DataManager:
-    def __init__(self):
+    def __init__(self, skip_validation=False):
         # Get logger
         self.log = logger
 
@@ -27,11 +28,14 @@ class DataManager:
 
         self.config = config
 
-        if self.validate_config() is False:
-            self.log.critical("Quitting.")
-            raise Exception
+        if not skip_validation:
+            if self.validate_config() is False:
+                self.log.critical("Quitting.")
+                raise Exception
+            else:
+                self.log.info("[bold blue]Configuration Validated!")
         else:
-            self.log.info("[bold blue]Configuration Validated!")
+            self.log.warning("[bold red]You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
 
         self.event = self.config["Event"]
         self.year = self.config["Year"]
@@ -46,10 +50,26 @@ class DataManager:
         self.session = self.Sessiontemplate()
         self.connection = self.engine.connect()
 
+        self.log.info("[bold blue]Erasing existing data")
+        tables = [
+            "match_data",
+            f"matchdata{self.config['Year']}",
+            "`match`",
+            "team_data",
+            f"teamdata{self.config['Year']}",
+            f"calculatedteamdata{self.config['Year']}",
+            "team",
+        ]
+        for t in tables:
+            tex = text(f"drop table if exists {t}")
+            self.connection.execute(tex)
+        self.session.commit()
+
         self.log.info("[bold blue]Loading Components")
         self.dataAccessor = DataAccessor(self.engine, self.session, self.connection)
         self.dataInput = DataInput(self.engine, self.session, self.connection, self.dataAccessor)
         self.dataProcessor = DataProcessor(self.engine, self.session, self.connection, self.dataAccessor)
+        self.dataCalculator = DataCalculator(self.engine,self.session,self.connection,self.dataAccessor)
 
         self.log.info("[bold blue]Loaded Scouting-Data-Ingest!")
 
@@ -169,6 +189,9 @@ class DataManager:
 
     def check_data(self):
         return self.dataProcessor.checkData()
+
+    def calculate_data(self):
+        self.dataCalculator.calculate_team_data()
 
     def refresh(self):
         self.get_data()
