@@ -52,6 +52,8 @@ class DataManager:
 
         self.log.info("[bold blue]Erasing existing data")
         tables = [
+            "red_association",
+            "blue_association"
             "match_data",
             f"matchdata{self.config['Year']}",
             "`match`",
