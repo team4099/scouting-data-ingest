@@ -89,7 +89,7 @@ For now, set the Event field to "vahay".
 
 ## Running the Program
 
-If you have a Python IDE, just run DataInput.py in the IDE.
+If you have a Python IDE, just run main.py in the IDE.
 
 If you do not have a Python IDE, open Command Line/Terminal and navigate back to the scouting-data-ingest folder. 
 Type ``python -m main``

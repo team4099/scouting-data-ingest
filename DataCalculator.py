@@ -12,27 +12,27 @@ from re import search
 
 class DataCalculator:
     def __init__(self, engine, session, connection, dataAccessor):
-        self.log = logger
+        self.log = logger.opt(colors=True).bind(color="yellow")
 
-        self.log.info("[bold green]Starting [bold white]DataCalculator")
+        self.log.info("Starting DataCalculator")
         # Loading configuration
-        self.log.info("[bold white]Loading Configuration")
+        self.log.info("Loading Configuration")
         with open("config/config.json") as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        self.log.info("[bold white]Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = engine
         self.session = session
         self.connection = connection
         self.dataAccessor = dataAccessor
 
-        self.log.info("[bold white]Initializing Variables")
+        self.log.info("Initializing Variables")
         self.team_list = pd.DataFrame()
 
-        self.log.info("[bold white]DataCalculator Loaded!")
+        self.log.info("DataCalculator Loaded!")
 
     def calculate_team_average(self, col):
         team_data = self.dataAccessor.getTeamData()[['teamid', col]].dropna()
@@ -111,13 +111,13 @@ class DataCalculator:
         self.session.commit()
 
     def team_data_to_sql(self, dfs):
-        self.log.info('[bold white]Joining Dataframes')
+        self.log.info('Joining Dataframes')
         full_df = dfs[0].join(dfs[1:])
-        self.log.info('[bold white]Configuring SQL')
+        self.log.info('Configuring SQL')
         self.team_data_sql_config(full_df)
-        self.log.info('[bold white]Configured SQL')
+        self.log.info('Configured SQL')
 
-        self.log.info('[bold white]Adding Data')
+        self.log.info('Adding Data')
         # TODO: Raise Issue about error when you comment following line
         full_df = full_df.replace(numpy.nan, null(), regex=True)
         for row in full_df.iterrows():
@@ -125,10 +125,10 @@ class DataCalculator:
         self.session.commit()
 
     def calculate_team_data(self):
-        self.log.info("[bold white]Getting a team list")
+        self.log.info("Getting a team list")
         self.team_list = self.dataAccessor.getTeams()
 
-        self.log.info("[bold white]Calculating averages")
+        self.log.info("Calculating averages")
         auto_low_avg = self.calculate_team_average("Cells_scored_in_Low_Goal")
         auto_high_avg = self.calculate_team_average("Cells_scored_in_High_Goal")
         tele_low_avg = self.calculate_team_average("Low_Goal")
@@ -137,7 +137,7 @@ class DataCalculator:
         fouls_avg = self.calculate_team_average("Fouls")
         climb_time_avg = self.calculate_team_average("Climb_Time")
 
-        self.log.info("[bold white]Calculating medians")
+        self.log.info("Calculating medians")
         auto_low_med  = self.calculate_team_median("Cells_scored_in_Low_Goal")
         auto_high_med = self.calculate_team_median("Cells_scored_in_High_Goal")
         tele_low_med  = self.calculate_team_median("Low_Goal")
@@ -146,13 +146,13 @@ class DataCalculator:
         fouls_med = self.calculate_team_median("Fouls")
         climb_time_med = self.calculate_team_median("Climb_Time")
 
-        self.log.info("[bold white]Calculating percentages")
+        self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
             ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
             replacements={"Yes": 1, "No": 0})
         climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False)
 
-        self.log.info("[bold white]Adding data to SQL")
+        self.log.info("Adding data to SQL")
         self.team_data_to_sql(
             [
                 auto_low_avg,

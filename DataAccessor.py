@@ -9,30 +9,30 @@ from SQLObjects import Matches,Teams,Base
 #TODO: Fix Documentation
 class DataAccessor:
     def __init__(self, engine, session, connection):
-        self.log = logger
+        self.log = logger.opt(colors=True).bind(color="cyan")
 
-        self.log.info("[bold green]Starting [bold orange]DataAccessor")
+        self.log.info("Starting DataAccessor")
         # Loading configuration
-        self.log.info("[bold purple]Loading Configuration")
+        self.log.info("Loading Configuration")
         with open("config/config.json") as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        self.log.info("[bold purple]Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = engine
         self.session = session
         self.connection = connection
 
-        self.log.info("[bold purple]Initializing Variables")
+        self.log.info("Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
         self.TeamDataObject = None
         self.MatchDataObject = None
         self.CalculatedTeamDataObject = None
 
-        self.log.info("[bold purple]DataAccessor Loaded!")
+        self.log.info("DataAccessor Loaded!")
 
     def getTeams(self, type_df:bool = True):
         if type_df:

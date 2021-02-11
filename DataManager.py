@@ -1,4 +1,5 @@
 import os
+import sys
 
 import gspread
 import pymysql
@@ -11,18 +12,20 @@ from DataCalculator import DataCalculator
 from DataInput import DataInput
 from DataProcessor import DataProcessor
 from DataAccessor import DataAccessor
-from terminal import console, logger
+from terminal import console
 from rich.syntax import Syntax
+from loguru import logger
 
 
 class DataManager:
     def __init__(self, skip_validation=False):
         # Get logger
-        self.log = logger
 
-        self.log.info("[bold green]Starting [bold blue]Scouting-Data-Ingest")
+        self.log = logger.opt(colors=True).bind(color="<green>")
+
+        self.log.info("Starting Scouting-Data-Ingest")
         # Loading configuration
-        self.log.info("[bold blue]Validating Configuration")
+        self.log.info("Validating Configuration")
         with open("config/config.json") as f:
             config = json.load(f)
 
@@ -33,15 +36,15 @@ class DataManager:
                 self.log.critical("Quitting.")
                 raise Exception
             else:
-                self.log.info("[bold blue]Configuration Validated!")
+                self.log.info("Configuration Validated!")
         else:
-            self.log.warning("[bold red]You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
+            self.log.warning("You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
 
         self.event = self.config["Event"]
         self.year = self.config["Year"]
 
         # Connecting to MySQL
-        self.log.info("[bold blue]Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = create_engine(
             f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting'
         )
@@ -50,7 +53,7 @@ class DataManager:
         self.session = self.Sessiontemplate()
         self.connection = self.engine.connect()
 
-        self.log.info("[bold blue]Erasing existing data")
+        self.log.info("Erasing existing data")
         tables = [
             'red_association',
             'blue_association',
@@ -67,13 +70,13 @@ class DataManager:
             self.connection.execute(tex)
         self.session.commit()
 
-        self.log.info("[bold blue]Loading Components")
+        self.log.info("Loading Components")
         self.dataAccessor = DataAccessor(self.engine, self.session, self.connection)
         self.dataInput = DataInput(self.engine, self.session, self.connection, self.dataAccessor)
         self.dataProcessor = DataProcessor(self.engine, self.session, self.connection, self.dataAccessor)
         self.dataCalculator = DataCalculator(self.engine,self.session,self.connection,self.dataAccessor)
 
-        self.log.info("[bold blue]Loaded Scouting-Data-Ingest!")
+        self.log.info("Loaded Scouting-Data-Ingest!")
 
     def validate_config(self):
         if "TBA-Key" not in self.config:
@@ -185,7 +188,7 @@ class DataManager:
         return True
 
     def get_data(self):
-        self.log.info(f"[bold blue]Getting data for {self.year + self.event}")
+        self.log.info(f"Getting data for {self.year + self.event}")
         self.dataInput.getTBAData(self.year + self.event)
         self.dataInput.getSheetData(self.year + self.event)
 

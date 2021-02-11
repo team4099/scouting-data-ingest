@@ -1,35 +1,38 @@
 import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from terminal import console, logger
+from terminal import console
 import pandas as pd
 from re import search
+from loguru import logger
 
 
 class DataProcessor:
-    def __init__(self, engine, session, connection, dataAccessor):
-        self.log = logger
+    def __init__(self, engine, session, connection, dataAccessor, err_cond=2):
+        self.log = logger.opt(colors=True).bind(color="light-yellow")
 
-        self.log.info("[bold green]Starting [bold purple]DataProcessor")
+        self.log.info("Starting DataProcessor")
         # Loading configuration
-        self.log.info("[bold purple]Loading Configuration")
+        self.log.info("Loading Configuration")
         with open("config/config.json") as f:
             config = json.load(f)
 
         self.config = config
 
         # Connecting to MySQL
-        self.log.info("[bold purple]Connecting to MySQL")
+        self.log.info("Connecting to MySQL")
         self.engine = engine
         self.session = session
         self.connection = connection
         self.dataAccessor = dataAccessor
 
-        self.log.info("[bold purple]Initializing Variables")
+        self.log.info("Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
+        self.errors = []
+        self.error_condition = err_cond
 
-        self.log.info("[bold purple]DataProcessor Loaded!")
+        self.log.info("DataProcessor Loaded!")
 
     def checkEqualsByAlliance(
         self,
@@ -120,15 +123,16 @@ class DataProcessor:
                     self.log.warning(f"Color {color} is not valid")
                     return
 
-                if row["Sum"] != curr_alliance_data["Sum"].sum():
-                    warning = f'For the {color} alliance in match {row["matchId"]}, the sum of the {", ".join([col for col in team_data_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])} columns ({curr_alliance_data["Sum"].sum()}) do not equal the sum of the {", ".join([col for col in match_data_columns["Blue"].columns if col not in ["matchId", "teamid", "Sum"]])} columns ({row["Sum"]})'
-                    self.log.error(warning)
+                if abs(row["Sum"] - curr_alliance_data["Sum"].sum()) > self.error_condition:
+                    self.errors.append(row["Sum"]-curr_alliance_data["Sum"].sum())
+                    warning = f'For the {"<blue>" if color == "Blue" else "<r>"}{color}</> alliance in match <b>{row["matchId"]}</b>, the sum of the {", ".join([col for col in team_data_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])} columns <d><green>({curr_alliance_data["Sum"].sum()})</></> do not equal the sum of the TBA columns <d><green>({row["Sum"]})</></>'
+                    self.log.log("DATA", warning)
                     warnings.append(warning)
 
         return warnings
 
     def checkSame(
-        self, team_data_column, match_data_column, team_orders
+        self, team_data_column, match_data_column
     ):  # series, series
         warnings = []
 
@@ -171,8 +175,8 @@ class DataProcessor:
 
                 if len(comparison.index) > 0:
                     for index, r in comparison.iterrows():
-                        warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]}\'s endgame status is recorded as {r["self"]} while TBA has it as {r["other"]}'
-                        self.log.error(warning)
+                        warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]}\'s endgame status is recorded as <d><blue>{r["self"]}</></> while TBA has it as <d><blue>{r["other"]}</></>'
+                        self.log.log("DATA",warning)
                         warnings.append(warning)
 
         return warnings
@@ -190,8 +194,8 @@ class DataProcessor:
 
     def checkData(self):
         warnings = {}
-        self.log.info("[bold purple]Validating Data")
-        self.log.info("[bold purple]Loading Data")
+        self.log.info("Validating Data")
+        self.log.info("Loading Data")
         try:
             team_data = pd.read_sql_table(
                 f"teamdata{self.config['Year']}", self.connection
@@ -218,7 +222,7 @@ class DataProcessor:
             )
             self.log.info(f'Table MatchData{self.config["Year"]} found')
 
-        self.log.info("[bold purple]Checking TeamData match keys")
+        self.log.info("Checking TeamData match keys")
         warnings["Match Key Violations"] = self.checkKey(team_data["Match_Key"])
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
@@ -234,7 +238,7 @@ class DataProcessor:
             },
         )
 
-        self.log.info("[bold purple]Checking for Auto Power Cell High Goal Violations")
+        self.log.info("Checking for Auto Power Cell High Goal Violations")
         warnings["Auto Power Cell High Goal Violations"] = self.checkEqualsByAlliance(
             team_data.loc[:, ["teamid", "Match_Key", "Cells_scored_in_High_Goal"]],
             {
@@ -257,7 +261,7 @@ class DataProcessor:
             },
         )
 
-        self.log.info("[bold purple]Checking for Teleop Power Cell Low Goal Violations")
+        self.log.info("Checking for Teleop Power Cell Low Goal Violations")
         warnings["Teleop Power Cell Low Goal Violations"] = self.checkEqualsByAlliance(
             team_data.loc[:, ["teamid", "Match_Key", "Low_Goal"]],
             {
@@ -271,7 +275,7 @@ class DataProcessor:
         )
 
         self.log.info(
-            "[bold purple]Checking for Teleop Power Cell High Goal Violations"
+            "Checking for Teleop Power Cell High Goal Violations"
         )
         warnings["Teleop Power Cell High Goal Violations"] = self.checkEqualsByAlliance(
             team_data.loc[:, ["teamid", "Match_Key", "High_Goal"]],
@@ -295,7 +299,7 @@ class DataProcessor:
             },
         )
 
-        self.log.info("[bold purple]Checking for Endgame Status Violations")
+        self.log.info("Checking for Endgame Status Violations")
         warnings["Endgame Status Violations"] = self.checkSame(
             team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
             .replace(pd.NA, "Unknown")
@@ -320,19 +324,8 @@ class DataProcessor:
                     ],
                 ],
             },
-            match_data.loc[
-                :,
-                [
-                    "matchId",
-                    "alliances.red.team_keys.1",
-                    "alliances.red.team_keys.2",
-                    "alliances.red.team_keys.3",
-                    "alliances.blue.team_keys.1",
-                    "alliances.blue.team_keys.2",
-                    "alliances.blue.team_keys.3",
-                ],
-            ],
         )
 
-        self.log.info(f"[bold purple]{sum([len(t) for t in warnings])} errors were found in the data.")
+        self.log.info(f"<b>{sum([len(t) for t in warnings.values()])}</b> errors were found in the data.")
+        self.log.info(f"The sum errors have an average of {round(sum(self.errors)/len(self.errors),2)}")
         return warnings
