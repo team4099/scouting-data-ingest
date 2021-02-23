@@ -1,4 +1,4 @@
 from DataProcessor import DataProcessor
 
 dp = DataProcessor()
-dp.checkData()
+dp.check_data()

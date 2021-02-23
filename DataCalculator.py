@@ -27,7 +27,8 @@ class DataCalculator:
         self.engine = engine
         self.session = session
         self.connection = connection
-        self.dataAccessor = dataAccessor
+        self.data_accessor = dataAccessor
+        self.calculated_team_data_object = None
 
         self.log.info("Initializing Variables")
         self.team_list = pd.DataFrame()
@@ -35,7 +36,16 @@ class DataCalculator:
         self.log.info("DataCalculator Loaded!")
 
     def calculate_team_average(self, col):
-        team_data = self.dataAccessor.getTeamData()[['teamid', col]].dropna()
+        """
+
+        Calculates an average by team for a metric.
+
+        :param col: A metric column from TeamData.
+        :type col: str
+        :return: A Dataframe of averages
+        :rtype: pandas.DataFrame
+        """
+        team_data = self.data_accessor.get_team_data()[['teamid', col]].dropna()
         if (len(team_data.index)) > 0:
             team_data_average = self.team_list.merge(team_data.groupby('teamid').mean(), how='outer', left_on='id',
                                                      right_index=True)
@@ -46,7 +56,16 @@ class DataCalculator:
         return team_data_average.set_index('id')
 
     def calculate_team_median(self, col):
-        team_data = self.dataAccessor.getTeamData()[['teamid', col]].dropna()
+        """
+
+        Calculates an median by team for a metric.
+
+        :param col: A metric column from TeamData.
+        :type col: str
+        :return: A Dataframe of medians
+        :rtype: pandas.DataFrame
+        """
+        team_data = self.data_accessor.get_team_data()[['teamid', col]].dropna()
         if (len(team_data.index)) > 0:
             team_data_average = self.team_list.merge(team_data.groupby('teamid').median(), how='outer', left_on='id',
                                                      right_index=True)
@@ -57,9 +76,22 @@ class DataCalculator:
         return team_data_average.set_index('id')
 
     def calculate_team_percentages(self, cols, one_hot_encoded=True, replacements=None):
+        """
+
+        Calculates percentages by team for a metric.
+
+        :param cols: Columns to convert to percentages
+        :type cols: List[str]
+        :param one_hot_encoded: Whether the data is already one hot encoded
+        :type one_hot_encoded: Union[bool, None]
+        :param replacements: A dict to map string values to integers
+        :type replacements: Union[Dict[str, int], None]
+        :return: A Dataframe of percentages
+        :rtype: pandas.DataFrame
+        """
         if replacements is None:
             replacements = {}
-        team_data = self.dataAccessor.getTeamData()[[*cols, 'teamid']]
+        team_data = self.data_accessor.get_team_data()[[*cols, 'teamid']]
         if not one_hot_encoded:
             team_data_encoded = pd.get_dummies(team_data[cols])
             team_data[team_data_encoded.columns] = team_data_encoded[team_data_encoded.columns]
@@ -71,10 +103,18 @@ class DataCalculator:
         team_data_percentages = team_data_percentages.rename(columns={c: c + "_pct" for c in cols})
         return team_data_percentages.set_index('id')
 
-    def team_data_sql_config(self, df):
+    def calculated_team_data_sql_config(self, df):
+        """
+
+        Configures the database for calculated data.
+
+        :param df: Calculated Team Data
+        :type df: pandas.DataFrame
+        """
         calc_data_config = {}
         df = df.reset_index().rename(columns={'id': 'teamid'})
         df = df.infer_objects()
+
         for col, dtype in zip(df.columns, df.dtypes):
             if dtype == numpy.float64:
                 calc_data_config[col] = f"Column(Float)"
@@ -92,21 +132,19 @@ class DataCalculator:
             "__tablename__": f'CalculatedTeamData{self.config["Year"]}',
             "__table_args__": {"extend_existing": True},
             "id": Column(Integer, primary_key=True),
-            #            "teamid": Column(String(50), ForeignKey("team.id")),
 
         }
 
         calc_data_config = {
             k: eval(v) for k, v in calc_data_config.items()
         }
-        self.CalculatedTeamDataObject = type(
+        self.calculated_team_data_object = type(
             f'CalculatedTeamData{self.config["Year"]}',
             (Base,),
             {**calc_data_config, **t_data},
         )
-        self.dataAccessor.CalculatedTeamDataObject = self.CalculatedTeamDataObject
-        #        Teams.calc_data = relationship(f'CalculatedTeamData{self.config["Year"]}')
-        self.session.commit()
+        self.data_accessor.CalculatedTeamDataObject = self.calculated_team_data_object
+        self.session.flush()
         Base.metadata.tables[f'CalculatedTeamData{self.config["Year"]}'].create(bind=self.engine)
         self.session.commit()
 
@@ -114,19 +152,21 @@ class DataCalculator:
         self.log.info('Joining Dataframes')
         full_df = dfs[0].join(dfs[1:])
         self.log.info('Configuring SQL')
-        self.team_data_sql_config(full_df)
+        self.calculated_team_data_sql_config(full_df)
         self.log.info('Configured SQL')
 
         self.log.info('Adding Data')
-        # TODO: Raise Issue about error when you comment following line
         full_df = full_df.replace(numpy.nan, null(), regex=True)
         for row in full_df.iterrows():
-            self.dataAccessor.addCalculatedTeamData(row[0], row[1])
+            self.data_accessor.add_calculated_team_data(row[0], row[1])
         self.session.commit()
 
     def calculate_team_data(self):
+        """
+            Calculates Team Data
+        """
         self.log.info("Getting a team list")
-        self.team_list = self.dataAccessor.getTeams()
+        self.team_list = self.data_accessor.get_teams()
 
         self.log.info("Calculating averages")
         auto_low_avg = self.calculate_team_average("Cells_scored_in_Low_Goal")

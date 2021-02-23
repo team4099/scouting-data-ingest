@@ -1,14 +1,23 @@
 import json
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from terminal import console
-import pandas as pd
 from re import search
+from typing import Dict, List
+
+import pandas
+import pandas as pd
 from loguru import logger
 
 
 class DataProcessor:
-    def __init__(self, engine, session, connection, dataAccessor, err_cond=2):
+    """Validates Data in multiple metrics"""
+
+    def __init__(self, data_accessor, err_cond=2):
+        """
+
+        :param data_accessor: An initialized DataAccessor object
+        :type data_accessor: DataAccessor.DataAccessor
+        :param err_cond: A tolerance value for data errors. Differences between data less than this value will be accepted.
+        :type err_cond: int
+        """
         self.log = logger.opt(colors=True).bind(color="light-yellow")
 
         self.log.info("Starting DataProcessor")
@@ -18,13 +27,7 @@ class DataProcessor:
             config = json.load(f)
 
         self.config = config
-
-        # Connecting to MySQL
-        self.log.info("Connecting to MySQL")
-        self.engine = engine
-        self.session = session
-        self.connection = connection
-        self.dataAccessor = dataAccessor
+        self.data_accessor = data_accessor
 
         self.log.info("Initializing Variables")
         self.warning_dict = {}
@@ -34,130 +37,111 @@ class DataProcessor:
 
         self.log.info("DataProcessor Loaded!")
 
-    def checkEqualsByAlliance(
-        self,
-        team_data_columns,
-        match_data_columns,
-        team_weights=None,
-        match_weights=None,
-    ):  # iterable of series, series
+    def check_equals_by_alliance(self, team_columns, match_columns, team_weights=None, match_weights=None):
+        """ Checks if the sum of a metric across an Alliance is equal to a metric for that Alliance in TBA.
+
+        Given a weights list, this function will apply it to the metrics.
+
+        :param team_columns: A Dataframe containing Team IDs, Match Keys and the metric(s) to be validated.
+        :type team_columns: pandas.core.frame.DataFrame
+        :param match_columns: A dictionary of dataframes for each color containing the Match Keys and metric(s) to be analyzed.
+        :type match_columns: Dict[str, pandas.core.frame.DataFrame]
+        :param team_weights: A list of weights for the metric columns.
+        :type team_weights: None
+        :param match_weights: A list of weights for the metric columns.
+        :type match_weights: None
+        :return: A list of warnings
+        :rtype: List[str]
+        """
         warnings = []
+        team_metrics = [col for col in team_columns.columns if col != "Match_Key" and col != "teamid"]
+        match_metrics = [[col for col in match_columns[color].columns if col != "matchId"] for color in match_columns.keys()]
 
-        matches = team_data_columns["Match_Key"].unique()
-        for match in matches:
-            for color, colored_data in match_data_columns.items():
-                if len(colored_data[colored_data["matchId"] == match].index) == 0:
-                    self.log.error(
-                        f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped"
-                    )
+        # Check if there are any matches in TeamData that aren't in MatchData and warn us
+        team_matches = set(team_columns["Match_Key"].unique())
+        tba_matches = set(match_columns['Blue']['matchId'].unique())
+        for match in team_matches - tba_matches:
+            self.log.error(f"TBA Data for {match} does not exist. It will be skipped")
 
-        if team_weights is None:
-            team_weights = [
-                1
-                for i in range(
-                    len(
-                        [
-                            col
-                            for col in team_data_columns.columns
-                            if col != "Match_Key" and col != "teamid"
-                        ]
-                    )
-                )
-            ]
-        if match_weights is None:
-            match_weights = [
-                1
-                for i in range(
-                    len(
-                        [
-                            col
-                            for col in match_data_columns["Blue"].columns
-                            if col != "matchId"
-                        ]
-                    )
-                )
-            ]
-        sumTeamColumn = pd.Series([0 for i in range(len(team_data_columns.index))])
-        for column, weight in zip(
-            [
-                col
-                for col in team_data_columns.columns
-                if col != "Match_Key" and col != "teamid"
-            ],
-            team_weights,
-        ):
-            sumTeamColumn += team_data_columns[column] * weight
-        team_data_columns["Sum"] = sumTeamColumn
+        # If team weights are specified, multiply their metrics by them
+        if team_weights is not None:
+            for column, weight in zip(team_metrics, team_weights):
+                team_columns[column] *= weight
+        if match_weights is not None:
+            for column, weight in zip(match_metrics, match_weights):
+                match_columns[column] *= weight
 
-        for color, data in match_data_columns.items():
-            sumMatchColumn = pd.Series([0 for i in range(len(data.index))])
-            for column, weight in zip(
-                [col for col in data.columns if col != "matchId"], match_weights
-            ):
-                sumMatchColumn += data[column] * weight
-            data["Sum"] = sumMatchColumn
-            match_data_columns[color] = data
+        # Sum the metric columns into a column called Sum
+        team_columns["Sum"] = team_columns[team_metrics].sum(axis=1)
 
-        for color, data in match_data_columns.items():
+        for (color, data), metrics in zip(match_columns.items(),match_metrics):
+            data["Sum"] = data[metrics].sum(axis=1)
+
+        # Check the Data by Alliance
+        for color, data in match_columns.items():
+            # Get the alliance pairings for each color
+            alliance_data = self.data_accessor.get_team_data(color=color)[["teamid", "Match_Key"]]
             for index, row in data.iterrows():
-                curr_match_data = team_data_columns.loc[
-                    team_data_columns["Match_Key"] == row["matchId"]
-                ]
+                curr_match_data = team_columns.loc[team_columns["Match_Key"] == row["matchId"]]
                 if len(curr_match_data.index) < 6:
-                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
+                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.")
+                    # TODO: Re-enable when all matches are added
                     continue
 
-                if color == "Red":
-                    curr_alliance_data = curr_match_data[
-                        curr_match_data["teamid"].isin(
-                            self.dataAccessor.getTeamData(match_key=row["matchId"], color="Red")["teamid"]
-                        )
-                    ]
-                elif color == "Blue":
-                    curr_alliance_data = curr_match_data[
-                        curr_match_data["teamid"].isin(
-                            self.dataAccessor.getTeamData(match_key=row["matchId"], color="Blue")["teamid"]
-                        )
-                    ]
-                else:
-                    self.log.warning(f"Color {color} is not valid")
-                    return
+                # Get only the match data for the color alliance in this match
+                curr_alliance_data = curr_match_data[
+                    curr_match_data["teamid"].isin(
+                        alliance_data[alliance_data["Match_Key"] == row["matchId"]]["teamid"]
+                    )
+                ]
 
+                # Check if the sum is within an error range and log the warning
                 if abs(row["Sum"] - curr_alliance_data["Sum"].sum()) > self.error_condition:
-                    self.errors.append(row["Sum"]-curr_alliance_data["Sum"].sum())
-                    warning = f'For the {"<blue>" if color == "Blue" else "<r>"}{color}</> alliance in match <b>{row["matchId"]}</b>, the sum of the {", ".join([col for col in team_data_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])} columns <d><green>({curr_alliance_data["Sum"].sum()})</></> do not equal the sum of the TBA columns <d><green>({row["Sum"]})</></>'
-                    self.log.log("DATA", warning)
-                    warnings.append(warning)
+                    self.errors.append(row["Sum"] - curr_alliance_data["Sum"].sum())
+                    warning_desc = f'<b>{row["matchId"]}{" " if len(row["matchId"]) < 14 else ""}</b> - {"<blue>" if color == "Blue" else "<r>"}{color}</> - '
+                    col_names = ", ".join([col for col in team_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])
+                    warning = f'sum of the {col_names} columns <d><green>({curr_alliance_data["Sum"].sum()})</></> do not equal the sum of the TBA columns <d><green>({row["Sum"]})</></>'
+                    self.log.log("DATA", warning_desc + warning)
+                    warnings.append(warning_desc + warning)
 
         return warnings
 
-    def checkSame(
-        self, team_data_column, match_data_column
-    ):  # series, series
+    def check_same(self, team_column, match_column):
+        """
+
+        Check if a metric is the same for each robot in team_data and match_data using driver stations.
+
+        :param team_column: A Dataframe containing Team IDs, Match Keys and the metric to be validated.
+        :type team_column: pandas.DataFrame
+        :param match_column: A dictionary of dataframes for each color containing the Match Keys and metric to be analyzed.
+        :type match_column: Dict[str, pandas.DataFrame]
+        :return: A list of warnings
+        :rtype: List[str]
+        """
         warnings = []
 
-        matches = team_data_column["Match_Key"].unique()
-        for match in matches:
-            for color, colored_data in match_data_column.items():
-                if len(colored_data[colored_data["matchId"] == match].index) == 0:
-                    self.log.warning(
-                        f"TBA Data for the {color} alliance in {match} does not exist. It will be skipped."
-                    )
+        # Check if there are any matches in TeamData that aren't in MatchData and warn us
+        team_matches = set(team_column["Match_Key"].unique())
+        tba_matches = set(match_column['Blue']['matchId'].unique())
+        for match in team_matches - tba_matches:
+            self.log.error(f"TBA Data for {match} does not exist. It will be skipped")
 
-        for color, data in match_data_column.items():
+
+        for color, data in match_column.items():
             for index, row in data.iterrows():
-                curr_match_data = team_data_column.loc[
-                    team_data_column["Match_Key"] == row["matchId"]
-                ]
+                curr_match_data = team_column.loc[
+                    team_column["Match_Key"] == row["matchId"]
+                    ]
                 if len(curr_match_data.index) < 6:
-                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.") #TODO: Re-enable when all matches are added
+                    # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.")
+                    # TODO: Re-enable when all matches are added
                     continue
 
                 if color == "Red":
-                    curr_order = self.dataAccessor.getTeamData(match_key=row["matchId"], color="Red")[
+                    curr_order = self.data_accessor.get_team_data(match_key=row["matchId"], color="Red")[
                         ['Driver_Station', 'teamid']].set_index('Driver_Station')
                 elif color == "Blue":
-                    curr_order = self.dataAccessor.getTeamData(match_key=row["matchId"], color="Blue")[
+                    curr_order = self.data_accessor.get_team_data(match_key=row["matchId"], color="Blue")[
                         ['Driver_Station', 'teamid']].set_index('Driver_Station')
                 else:
                     self.log.error(f"Color {color} is not valid")
@@ -174,14 +158,24 @@ class DataProcessor:
                 comparison = curr_match_data.compare(tba_data)
 
                 if len(comparison.index) > 0:
-                    for index, r in comparison.iterrows():
-                        warning = f'For the {color} alliance in match {row["matchId"]}, {curr_order.loc[curr_order.index[index], "teamid"]}\'s endgame status is recorded as <d><blue>{r["self"]}</></> while TBA has it as <d><blue>{r["other"]}</></>'
-                        self.log.log("DATA",warning)
-                        warnings.append(warning)
+                    for i, r in comparison.iterrows():
+                        warning_desc = f'<b>{row["matchId"]}{" " if len(row["matchId"]) < 14 else ""}</b> - {"<blue>" if color == "Blue" else "<r>"}{color}</> - '
+                        warning = f'{curr_order.loc[curr_order.index[i], "teamid"]}\'s endgame status is recorded as <d><blue>{r["self"]}</></> while TBA has it as <d><blue>{r["other"]}</></>'
+                        self.log.log("DATA", warning_desc + warning)
+                        warnings.append(warning_desc + warning)
 
         return warnings
 
-    def checkKey(self, team_data_column):  # series
+    def check_key(self, team_data_column):
+        """
+
+        Checks if any keys do not follow the appropriate format or have been entered incorrectly.
+
+        :param team_data_column: A list of keys.
+        :type team_data_column: pandas.Series
+        :return: A list of warnings
+        :rtype: List[str]
+        """
         warnings = []
         for index, key in team_data_column.iteritems():
             if not search(r"2020[a-z]{4,5}_(qm|sf|qf|f)\d{1,2}(m\d{1})*", key):
@@ -192,140 +186,125 @@ class DataProcessor:
                 warnings.append(warning)
         return warnings
 
-    def checkData(self):
+    def check_data(self):
+        """
+
+        Run the user defined checks on the data
+
+        :return: A dictionary of warnings
+        :rtype: Dict[str, List]
+        """
         warnings = {}
         self.log.info("Validating Data")
         self.log.info("Loading Data")
-        try:
-            team_data = pd.read_sql_table(
-                f"teamdata{self.config['Year']}", self.connection
-            )
-        except Exception as e:
-            self.log.info(
-                f'Table teamdata{self.config["Year"]} not found, trying TeamData{self.config["Year"]}'
-            )
-            team_data = pd.read_sql_table(
-                f"TeamData{self.config['Year']}", self.connection
-            )
-            self.log.info(f'Table TeamData{self.config["Year"]} found')
 
-        try:
-            match_data = pd.read_sql_table(
-                f"matchdata{self.config['Year']}", self.connection
-            )
-        except Exception as e:
-            self.log.info(
-                f'Table matchdata{self.config["Year"]} not found, trying MatchData{self.config["Year"]}'
-            )
-            match_data = pd.read_sql_table(
-                f"MatchData{self.config['Year']}", self.connection
-            )
-            self.log.info(f'Table MatchData{self.config["Year"]} found')
+        team_data = self.data_accessor.get_team_data()
+        match_data = self.data_accessor.get_match_data()
 
         self.log.info("Checking TeamData match keys")
-        warnings["Match Key Violations"] = self.checkKey(team_data["Match_Key"])
+        warnings["Match Key Violations"] = self.check_key(team_data["Match_Key"])
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
-        warnings["Auto Power Cell Low Goal Violations"] = self.checkEqualsByAlliance(
+        warnings["Auto Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
             team_data.loc[:, ["teamid", "Match_Key", "Cells_scored_in_Low_Goal"]],
             {
                 "Blue": match_data.loc[
-                    :, ["matchId", "score_breakdown.blue.autoCellsBottom"]
-                ],
+                        :, ["matchId", "score_breakdown.blue.autoCellsBottom"]
+                        ],
                 "Red": match_data.loc[
-                    :, ["matchId", "score_breakdown.red.autoCellsBottom"]
-                ],
+                       :, ["matchId", "score_breakdown.red.autoCellsBottom"]
+                       ],
             },
         )
 
         self.log.info("Checking for Auto Power Cell High Goal Violations")
-        warnings["Auto Power Cell High Goal Violations"] = self.checkEqualsByAlliance(
+        warnings["Auto Power Cell High Goal Violations"] = self.check_equals_by_alliance(
             team_data.loc[:, ["teamid", "Match_Key", "Cells_scored_in_High_Goal"]],
             {
                 "Blue": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.blue.autoCellsInner",
-                        "score_breakdown.blue.autoCellsOuter",
-                    ],
-                ],
+                        :,
+                        [
+                            "matchId",
+                            "score_breakdown.blue.autoCellsInner",
+                            "score_breakdown.blue.autoCellsOuter",
+                        ],
+                        ],
                 "Red": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.red.autoCellsInner",
-                        "score_breakdown.red.autoCellsOuter",
-                    ],
-                ],
+                       :,
+                       [
+                           "matchId",
+                           "score_breakdown.red.autoCellsInner",
+                           "score_breakdown.red.autoCellsOuter",
+                       ],
+                       ],
             },
         )
 
         self.log.info("Checking for Teleop Power Cell Low Goal Violations")
-        warnings["Teleop Power Cell Low Goal Violations"] = self.checkEqualsByAlliance(
+        warnings["Teleop Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
             team_data.loc[:, ["teamid", "Match_Key", "Low_Goal"]],
             {
                 "Blue": match_data.loc[
-                    :, ["matchId", "score_breakdown.blue.teleopCellsBottom"]
-                ],
+                        :, ["matchId", "score_breakdown.blue.teleopCellsBottom"]
+                        ],
                 "Red": match_data.loc[
-                    :, ["matchId", "score_breakdown.red.teleopCellsBottom"]
-                ],
+                       :, ["matchId", "score_breakdown.red.teleopCellsBottom"]
+                       ],
             },
         )
 
         self.log.info(
             "Checking for Teleop Power Cell High Goal Violations"
         )
-        warnings["Teleop Power Cell High Goal Violations"] = self.checkEqualsByAlliance(
+        warnings["Teleop Power Cell High Goal Violations"] = self.check_equals_by_alliance(
             team_data.loc[:, ["teamid", "Match_Key", "High_Goal"]],
             {
                 "Blue": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.blue.teleopCellsInner",
-                        "score_breakdown.blue.teleopCellsOuter",
-                    ],
-                ],
+                        :,
+                        [
+                            "matchId",
+                            "score_breakdown.blue.teleopCellsInner",
+                            "score_breakdown.blue.teleopCellsOuter",
+                        ],
+                        ],
                 "Red": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.red.teleopCellsInner",
-                        "score_breakdown.red.teleopCellsOuter",
-                    ],
-                ],
+                       :,
+                       [
+                           "matchId",
+                           "score_breakdown.red.teleopCellsInner",
+                           "score_breakdown.red.teleopCellsOuter",
+                       ],
+                       ],
             },
         )
 
         self.log.info("Checking for Endgame Status Violations")
-        warnings["Endgame Status Violations"] = self.checkSame(
+        warnings["Endgame Status Violations"] = self.check_same(
             team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
-            .replace(pd.NA, "Unknown")
-            .replace("No Climb", "None"),
+                .replace(pd.NA, "Unknown")
+                .replace("No Climb", "None"),
             {
                 "Blue": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.blue.endgameRobot1",
-                        "score_breakdown.blue.endgameRobot2",
-                        "score_breakdown.blue.endgameRobot3",
-                    ],
-                ],
+                        :,
+                        [
+                            "matchId",
+                            "score_breakdown.blue.endgameRobot1",
+                            "score_breakdown.blue.endgameRobot2",
+                            "score_breakdown.blue.endgameRobot3",
+                        ],
+                        ],
                 "Red": match_data.loc[
-                    :,
-                    [
-                        "matchId",
-                        "score_breakdown.red.endgameRobot1",
-                        "score_breakdown.red.endgameRobot2",
-                        "score_breakdown.red.endgameRobot3",
-                    ],
-                ],
+                       :,
+                       [
+                           "matchId",
+                           "score_breakdown.red.endgameRobot1",
+                           "score_breakdown.red.endgameRobot2",
+                           "score_breakdown.red.endgameRobot3",
+                       ],
+                       ],
             },
         )
 
         self.log.info(f"<b>{sum([len(t) for t in warnings.values()])}</b> errors were found in the data.")
-        self.log.info(f"The sum errors have an average of {round(sum(self.errors)/len(self.errors),2)}")
+        self.log.info(f"The sum errors have an average of <b>{round(sum(self.errors) / len(self.errors), 2)}</b>")
         return warnings

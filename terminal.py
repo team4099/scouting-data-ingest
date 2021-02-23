@@ -3,8 +3,11 @@ import sys
 from rich.console import Console
 from loguru import logger
 
+# Instantiate a Rich Console object for use later
 console = Console()
 
+
+# Create a Formatter class to highlight module names in the correct color automatically
 class Formatter:
     def __init__(self):
         self.padding = 0
@@ -26,7 +29,9 @@ class Formatter:
 
         return self.fmt.replace('{module: <14}',f"<{color}>"+"{module: <14}"+f"</{color}>")
 
+# Remove the given logger and put in our own
 logger.remove(0)
 f = Formatter()
 logger.add(sys.stdout, colorize=True, format=f.format)
+# Create a new level for data errors
 logger.level("DATA", no=39, color="<red><d>")

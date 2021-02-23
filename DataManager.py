@@ -19,8 +19,6 @@ from loguru import logger
 
 class DataManager:
     def __init__(self, skip_validation=False):
-        # Get logger
-
         self.log = logger.opt(colors=True).bind(color="<green>")
 
         self.log.info("Starting Scouting-Data-Ingest")
@@ -48,9 +46,9 @@ class DataManager:
         self.engine = create_engine(
             f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting'
         )
-        self.Sessiontemplate = sessionmaker()
-        self.Sessiontemplate.configure(bind=self.engine)
-        self.session = self.Sessiontemplate()
+        self.session_template = sessionmaker()
+        self.session_template.configure(bind=self.engine)
+        self.session = self.session_template()
         self.connection = self.engine.connect()
 
         self.log.info("Erasing existing data")
@@ -71,14 +69,21 @@ class DataManager:
         self.session.commit()
 
         self.log.info("Loading Components")
-        self.dataAccessor = DataAccessor(self.engine, self.session, self.connection)
-        self.dataInput = DataInput(self.engine, self.session, self.connection, self.dataAccessor)
-        self.dataProcessor = DataProcessor(self.engine, self.session, self.connection, self.dataAccessor)
-        self.dataCalculator = DataCalculator(self.engine,self.session,self.connection,self.dataAccessor)
+        self.data_accessor = DataAccessor(self.engine, self.session, self.connection)
+        self.data_input = DataInput(self.engine, self.session, self.connection, self.data_accessor)
+        self.data_processor = DataProcessor(self.data_accessor)
+        self.data_calculator = DataCalculator(self.engine, self.session, self.connection, self.data_accessor)
 
         self.log.info("Loaded Scouting-Data-Ingest!")
 
     def validate_config(self):
+        """
+
+        Runs validation on the configuration.
+
+        :return: Whether the configuration is valid
+        :rtype: bool
+        """
         if "TBA-Key" not in self.config:
             self.log.error(
                 "You are missing the TBA-Key field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
@@ -139,7 +144,7 @@ class DataManager:
             return False
         else:
             try:
-                sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
+                gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
             except gspread.exceptions.SpreadsheetNotFound:
                 self.log.error(
                     "The file listed in the Spreadsheets field has not been shared with the service account. Please make sure it is."
@@ -159,7 +164,7 @@ class DataManager:
             return False
 
         try:
-            engine = create_engine(
+            create_engine(
                 f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting'
             )
         except pymysql.err.OpertionalError:
@@ -188,17 +193,37 @@ class DataManager:
         return True
 
     def get_data(self):
+        """
+        Gets Data from TBA and Google Sheets
+
+        """
         self.log.info(f"Getting data for {self.year + self.event}")
-        self.dataInput.getTBAData(self.year + self.event)
-        self.dataInput.getSheetData(self.year + self.event)
+        self.data_input.get_tba_data(self.year + self.event)
+        self.data_input.get_sheet_data(self.year + self.event)
 
     def check_data(self):
-        return self.dataProcessor.checkData()
+        """
+
+        Checks the data for errors.
+
+        :return: A dict of warnings
+        :rtype: Dict[str, List]
+        """
+        return self.data_processor.check_data()
 
     def calculate_data(self):
-        self.dataCalculator.calculate_team_data()
+        """
+        Calculates TeamData
+        """
+        self.data_calculator.calculate_team_data()
 
     def refresh(self):
+        """
+        Gets Data and then checks it.
+
+        :return: A dictionary of warnings
+        :rtype: Dict[str, List]
+        """
         self.get_data()
         warnings = self.check_data()
         return warnings

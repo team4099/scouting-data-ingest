@@ -1,12 +1,10 @@
 import json
-from sqlalchemy import create_engine, exists
-from sqlalchemy.orm import sessionmaker
-from terminal import console, logger
+from sqlalchemy import exists
+from terminal import logger
 import pandas as pd
-from re import search
-from SQLObjects import Matches,Teams,Base
+from SQLObjects import Matches, Teams
 
-#TODO: Fix Documentation
+
 class DataAccessor:
     def __init__(self, engine, session, connection):
         self.log = logger.opt(colors=True).bind(color="cyan")
@@ -34,20 +32,33 @@ class DataAccessor:
 
         self.log.info("DataAccessor Loaded!")
 
-    def getTeams(self, type_df:bool = True):
-        if type_df:
-            return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement,self.connection)['id'])
-        else:
-            return self.session.query(Teams)[:]
-
-    def getTeamData(self, team_id:str = None, match_key:str = None, color:str = None, driver_station:int = None, type_df:bool = True):
+    def get_teams(self):
         """
-        Gets a team data object if it exists in the database. If it does not, it will return None and print a warning.
 
-        :param team_id: The team id of the wanted team
-        :param id: The match key
+        Get all the stored teams
 
-        :returns: Team Data Object
+        :return: A Dataframe containing the Team IDs
+        :rtype: pandas.DataFrame
+        """
+        return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement, self.connection)['id'])
+
+    def get_team_data(self, team_id=None, match_key=None, color=None, driver_station=None, type_df: bool = True):
+        """
+
+        Gets a TeamData object with multiple optional filters
+
+        :param team_id: A Team ID to be filtered by
+        :type team_id: Union[str, None]
+        :param match_key: A Match Key to be filtered by
+        :type match_key: Union[str, None]
+        :param color: An Alliance color to be filtered by
+        :type color: Union[str, None]
+        :param driver_station: A Driver Station number to be filtered by
+        :type driver_station: Union[int, None]
+        :param type_df: Whether this function should return a Dataframe or List
+        :type type_df: bool
+        :return: The requested data.
+        :rtype: Union[pandas.DataFrame, List]
         """
         query = self.session.query(self.TeamDataObject)
         if team_id is not None:
@@ -60,33 +71,47 @@ class DataAccessor:
             query = query.filter(self.TeamDataObject.Driver_Station == driver_station)
 
         if type_df:
-            return pd.read_sql_query(query.statement,self.connection)
+            return pd.read_sql_query(query.statement, self.connection)
         else:
             return query[:]
 
-    def getMatch(self, id):
+    def get_match_data(self, match_key=None, color=None, type_df=True):
         """
-        Gets a match if it exists in the database. If it does not, it will return None and print a warning.
 
-        :param id: The match key
+        Gets a MatchData object with multiple optional filters
 
-        :returns: Match
+        :param match_key: A Match Key to be filtered by
+        :type match_key: Union[str, None]
+        :param color: An Alliance color to be filtered by
+        :type color: Union[str, None]
+        :param type_df: Whether this function should return a Dataframe or List
+        :type type_df: bool
+        :return: The requested data.
+        :rtype: pandas.DataFrame
         """
-        if self.checkIfExists(Matches, id):
-            return self.session.query(Matches).filter_by(id=id)[0]
+        query = self.session.query(self.MatchDataObject)
+        if match_key is not None:
+            query = query.filter(self.MatchDataObject.matchId == match_key)
+        if color is not None:
+            query = query.filter(self.MatchDataObject.Alliance == color)
+
+        if type_df:
+            return pd.read_sql_query(query.statement, self.connection)
         else:
-            self.log.warning("Match does not exist")
+            return query[:]
 
-    def addMatchData(self, key: str, data):
+    def add_match_data(self, key: str, data):
         """
-        Adds a match object to the database. Will prevent a match from being added if it already exists. Will not commit changes.
 
-        :param key: The match key
-        :param data: A year specific MatchData object for the match
+        Adds a match to the database if it doesn't already exist.
 
-        :returns: None
+        :param key: Match Key
+        :type key: str
+        :param data: A year-specific Match Data Object
+        :type data: DataInput.MatchData2020
+        :rtype: None
         """
-        if self.checkIfMatchExists(key):
+        if self.check_if_match_exists(key):
             self.log.warning("MatchData already exists. It will not be added.")
             return
 
@@ -94,15 +119,16 @@ class DataAccessor:
 
         self.session.add(m)
 
-    def addTeam(self, id: str):
+    def add_team(self, id: str):
         """
-        Adds a team object to the database. Will prevent a team_data from being added if it already exists. Will not commit changes.
 
-        :param id: The team id
+        Adds a Team to the Database if it doesn't already exist.
 
-        :returns: None
+        :param id: Team ID
+        :type id: str
+        :rtype: None
         """
-        if self.checkIfTeamExists(id):
+        if self.check_if_team_exists(id):
             self.log.warning("Team already exists. It will not be added.")
             return
 
@@ -111,16 +137,20 @@ class DataAccessor:
         self.session.add(m)
         self.session.commit()
 
-    def addTeamData(self, id: str, match_key: str, data):
+    def add_team_data(self, id: str, match_key: str, data):
         """
-        Adds a team_data object to the database. Will prevent a team_data from being added if it already exists. Will not commit changes.
 
-        :param id: The team id
-        :param data: A year specific TeamData object for the match
+        Adds a TeamData Object to the database if it doesn't already exist.
 
-        :returns: None
+        :param id: Team ID
+        :type id: str
+        :param match_key: Match Key
+        :type match_key: str
+        :param data: A pandas Series of data
+        :type data: pandas.Series
+        :rtype: None
         """
-        if self.checkIfTeamDataExists(id,match_key):
+        if self.check_if_team_data_exists(id, match_key):
             self.log.warning("Team already exists. It will not be added.")
             return
 
@@ -128,31 +158,36 @@ class DataAccessor:
 
         self.session.add(m)
 
-    def addCalculatedTeamData(self, id: str, data):
+    def add_calculated_team_data(self, id: str, data):
         """
-        Adds a team_data object to the database. Will prevent a team_data from being added if it already exists. Will not commit changes.
 
-        :param id: The team id
-        :param data: A year specific TeamData object for the match
+        Adds a CalculatedTeamData Object to the database if it doesn't already exist.
 
-        :returns: None
+        :param id: Team ID
+        :type id: str
+        :param data: A pandas Series of calculated data.
+        :type data: pandas.Series
+        :rtype: None
         """
-        #if self.checkIfCalculatedTeamDataExists(id):
-        #    self.log.warning("CalculatedTeamData already exists. It will not be added.")
-        #    return
+        if self.check_if_calculated_team_data_exists(id):
+            self.log.warning("CalculatedTeamData already exists. It will not be added.")
+            return
 
         m = self.CalculatedTeamDataObject(teamid=id, **data.to_dict())
 
         self.session.add(m)
 
-    def checkIfTeamDataExists(self, team_id, match_key):
+    def check_if_team_data_exists(self, team_id, match_key):
         """
-        Checks if a TeamData object exists.
 
-        :param team_id: The team key
-        :param match_key: The match key
+        Checks if a given teamdata for a team and match exists in the database.
 
-        :returns: Boolean
+        :param team_id: Team ID
+        :type team_id: str
+        :param match_key: Match Key
+        :type match_key: str
+        :return: Whether the team data exists or not.
+        :rtype: bool
         """
         with self.session.no_autoflush:
             ((ret,),) = self.session.query(
@@ -162,14 +197,15 @@ class DataAccessor:
             )
         return ret
 
-    def checkIfCalculatedTeamDataExists(self, team_id):
+    def check_if_calculated_team_data_exists(self, team_id):
         """
-        Checks if a TeamData object exists.
 
-        :param team_id: The team key
-        :param match_key: The match key
+        Checks if a given calculated team data for a team exists in the database.
 
-        :returns: Boolean
+        :param team_id: Team ID
+        :type team_id: str
+        :return: Whether the calculated team data exists or not.
+        :rtype: bool
         """
         with self.session.no_autoflush:
             ((ret,),) = self.session.query(
@@ -178,13 +214,15 @@ class DataAccessor:
             )
         return ret
 
-    def checkIfMatchDataExists(self, match_key):
+    def check_if_match_data_exists(self, match_key):
         """
-        Checks if a MatchData object exists.
 
-        :param match_key: The match key
+        Checks if a given match data for a match key exists in the database.
 
-        :returns: Boolean
+        :param match_key: A Match Key
+        :type match_key: str
+        :return: Whether the match data exists or not.
+        :rtype: bool
         """
         with self.session.no_autoflush:
             ((ret,),) = self.session.query(
@@ -193,33 +231,36 @@ class DataAccessor:
             )
         return ret
 
-    def checkIfTeamExists(self, team_id):
+    def check_if_team_exists(self, team_id):
         """
-        Checks if a Team object exists.
 
-        :param team_id: The team key
+        Checks if a given team for a team ID exists in the database.
 
-        :returns: Boolean
-        """
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                    .where(Teams.id == team_id)
-            )
-        return ret
-
-    def checkIfMatchExists(self, match_key):
-        """
-        Checks if a Match object exists.
-
-        :param match_key: The match key
-
-        :returns: Boolean
+        :param team_id: Team ID
+        :type team_id: str
+        :return: Whether the team exists or not.
+        :rtype: bool
         """
         with self.session.no_autoflush:
             ((ret,),) = self.session.query(
                 exists()
-                    .where(Matches.id == match_key)
+                .where(Teams.id == team_id)
             )
         return ret
 
+    def check_if_match_exists(self, match_key):
+        """
+
+        Checks if a given match for a match key exists in the database.
+
+        :param match_key: A Match Key
+        :type match_key: str
+        :return: Whether the match exists or not.
+        :rtype: bool
+        """
+        with self.session.no_autoflush:
+            ((ret,),) = self.session.query(
+                exists()
+                .where(Matches.id == match_key)
+            )
+        return ret
