@@ -206,7 +206,7 @@ class DataProcessor:
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
         warnings["Auto Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Cells_scored_in_Low_Goal"]],
+            team_data.loc[:, ["teamid", "Match_Key", "Auto_Low_Goal"]],
             {
                 "Blue": match_data.loc[
                         :, ["matchId", "score_breakdown.blue.autoCellsBottom"]
@@ -219,7 +219,7 @@ class DataProcessor:
 
         self.log.info("Checking for Auto Power Cell High Goal Violations")
         warnings["Auto Power Cell High Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Cells_scored_in_High_Goal"]],
+            team_data.loc[:, ["teamid", "Match_Key", "Auto_High_Goal"]],
             {
                 "Blue": match_data.loc[
                         :,
@@ -242,7 +242,7 @@ class DataProcessor:
 
         self.log.info("Checking for Teleop Power Cell Low Goal Violations")
         warnings["Teleop Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Low_Goal"]],
+            team_data.loc[:, ["teamid", "Match_Key", "Teleop_Low_Goal"]],
             {
                 "Blue": match_data.loc[
                         :, ["matchId", "score_breakdown.blue.teleopCellsBottom"]
@@ -257,7 +257,7 @@ class DataProcessor:
             "Checking for Teleop Power Cell High Goal Violations"
         )
         warnings["Teleop Power Cell High Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "High_Goal"]],
+            team_data.loc[:, ["teamid", "Match_Key", "Teleop_High_Goal"]],
             {
                 "Blue": match_data.loc[
                         :,

@@ -212,13 +212,11 @@ class DataInput:
         self.log.info("Constructing Configuration")
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
-            if dtype == numpy.float64:
-                matchDataConfig[col] = f"Column(Float)"
-            elif dtype == numpy.int64:
-                matchDataConfig[col] = f"Column(Integer)"
-            elif dtype == numpy.object:
-                matchDataConfig[col] = f"Column(String(100))"
-            elif dtype == numpy.bool:
+            if pd.Int64Dtype.is_dtype(dtype):
+                matchDataConfig[col] = f"Column(Float())"
+            elif pd.StringDtype.is_dtype(dtype):
+                matchDataConfig[col] = f"Column(Text(500))"
+            elif pd.BooleanDtype.is_dtype(dtype):
                 matchDataConfig[col] = f"Column(Boolean())"
             else:
                 self.log.warning(
