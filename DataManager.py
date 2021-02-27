@@ -77,7 +77,6 @@ class DataManager:
         self.data_processor = DataProcessor(self.data_accessor)
         self.data_calculator = DataCalculator(self.engine, self.session, self.connection, self.data_accessor)
 
-        self.scheduler = sched.scheduler(time.time, time.sleep)
         self.interval = interval
 
         self.log.info("Loaded Scouting-Data-Ingest!")
@@ -264,14 +263,14 @@ class DataManager:
         self.get_data()
         warnings = self.check_data()
         self.calculate_data()
+        self.log.info("Run finished.")
         return warnings
 
     def start(self):
         """
         Starts the ingest
         """
-        self.refresh()
-
+        start_time = time.time()
         while True:
-            self.scheduler.enter(self.interval, 1, self.refresh)
-            self.scheduler.run()
+            self.refresh()
+            time.sleep(self.interval - ((time.time() - start_time) % self.interval))
