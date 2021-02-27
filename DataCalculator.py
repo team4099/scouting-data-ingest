@@ -27,11 +27,12 @@ class DataCalculator:
         self.engine = engine
         self.session = session
         self.connection = connection
-        self.data_accessor = dataAccessor
-        self.calculated_team_data_object = None
 
         self.log.info("Initializing Variables")
         self.team_list = pd.DataFrame()
+        self.data_accessor = dataAccessor
+        self.calculated_team_data_object = None
+        self.sql_configured = False
 
         self.log.info("DataCalculator Loaded!")
 
@@ -131,9 +132,9 @@ class DataCalculator:
         t_data = {
             "__tablename__": f'CalculatedTeamData{self.config["Year"]}',
             "__table_args__": {"extend_existing": True},
-            "id": Column(Integer, primary_key=True),
-
         }
+
+        calc_data_config['teamid'] = "Column(String(20), primary_key=True)"
 
         calc_data_config = {
             k: eval(v) for k, v in calc_data_config.items()
@@ -147,13 +148,17 @@ class DataCalculator:
         self.session.flush()
         Base.metadata.tables[f'CalculatedTeamData{self.config["Year"]}'].create(bind=self.engine)
         self.session.commit()
+        self.sql_configured = True
 
     def team_data_to_sql(self, dfs):
         self.log.info('Joining Dataframes')
         full_df = dfs[0].join(dfs[1:])
-        self.log.info('Configuring SQL')
-        self.calculated_team_data_sql_config(full_df)
-        self.log.info('Configured SQL')
+        if not self.sql_configured:
+            self.log.info('Configuring SQL')
+            self.calculated_team_data_sql_config(full_df)
+            self.log.info('Configured SQL')
+        else:
+            self.data_accessor.delete_calculated_team_data()
 
         self.log.info('Adding Data')
         full_df = full_df.replace(numpy.nan, null(), regex=True)
@@ -178,9 +183,9 @@ class DataCalculator:
         climb_time_avg = self.calculate_team_average("Climb_Time")
 
         self.log.info("Calculating medians")
-        auto_low_med  = self.calculate_team_median("Auto_Low_Goal")
+        auto_low_med = self.calculate_team_median("Auto_Low_Goal")
         auto_high_med = self.calculate_team_median("Auto_High_Goal")
-        tele_low_med  = self.calculate_team_median("Teleop_Low_Goal")
+        tele_low_med = self.calculate_team_median("Teleop_Low_Goal")
         tele_high_med = self.calculate_team_median("Teleop_High_Goal")
         tele_miss_med = self.calculate_team_median("Teleop_Misses")
         fouls_med = self.calculate_team_median("Fouls")

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Match Dashboard</title>
+</head>
+<body>
+<form action="/form">
+    <label for="match_num">Match Number</label>
+    <input type="number" name="match_num" id="match_num" min="1" max={{ max_matches }} value={{ count }}>
+</form>
+<p>
+    The current match is qm{{ count }}.
+</p>
+</body>
+</html>

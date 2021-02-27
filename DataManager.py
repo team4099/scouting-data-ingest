@@ -1,5 +1,6 @@
 import os
-import sys
+import sched
+import time
 
 import gspread
 import pymysql
@@ -18,7 +19,7 @@ from loguru import logger
 
 
 class DataManager:
-    def __init__(self, skip_validation=False):
+    def __init__(self, skip_validation=False, interval=180, simulation=False):
         self.log = logger.opt(colors=True).bind(color="<green>")
 
         self.log.info("Starting Scouting-Data-Ingest")
@@ -28,6 +29,7 @@ class DataManager:
             config = json.load(f)
 
         self.config = config
+        self.simulation = simulation
 
         if not skip_validation:
             if self.validate_config() is False:
@@ -36,7 +38,8 @@ class DataManager:
             else:
                 self.log.info("Configuration Validated!")
         else:
-            self.log.warning("You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
+            self.log.warning(
+                "You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
 
         self.event = self.config["Event"]
         self.year = self.config["Year"]
@@ -70,9 +73,12 @@ class DataManager:
 
         self.log.info("Loading Components")
         self.data_accessor = DataAccessor(self.engine, self.session, self.connection)
-        self.data_input = DataInput(self.engine, self.session, self.connection, self.data_accessor)
+        self.data_input = DataInput(self.engine, self.session, self.connection, self.data_accessor, simulation)
         self.data_processor = DataProcessor(self.data_accessor)
         self.data_calculator = DataCalculator(self.engine, self.session, self.connection, self.data_accessor)
+
+        self.scheduler = sched.scheduler(time.time, time.sleep)
+        self.interval = interval
 
         self.log.info("Loaded Scouting-Data-Ingest!")
 
@@ -90,10 +96,10 @@ class DataManager:
             )
             return False
         elif (
-            requests.get(
-                "https://google.com"
-            ).status_code
-            == 401
+                requests.get(
+                    "https://google.com"
+                ).status_code
+                == 401
         ):
             self.log.error(
                 "The key listed in the TBA-Key field is not valid. Please ensure the key is correct."
@@ -167,7 +173,7 @@ class DataManager:
             create_engine(
                 f'mysql+pymysql://{self.config["Database User"]}:{self.config["Database Password"]}@localhost/scouting'
             )
-        except pymysql.err.OpertionalError:
+        except pymysql.err.OperationalError:
             self.log.error(
                 "Your Databse user name and/or password is not correct. Please verify them."
             )
@@ -179,16 +185,46 @@ class DataManager:
             return False
 
         if (
-            requests.get(
-                f"https://www.thebluealliance.com/api/v3/event/{self.config['Year']}{self.config['Event']}",
-                headers={"X-TBA-Auth-Key": self.config["TBA-Key"]},
-            ).status_code
-            == 404
+                requests.get(
+                    f"https://www.thebluealliance.com/api/v3/event/{self.config['Year']}{self.config['Event']}",
+                    headers={"X-TBA-Auth-Key": self.config["TBA-Key"]},
+                ).status_code
+                == 404
         ):
             self.log.error(
                 "The event listed in the TBA-Key field is not valid. Please ensure the event key and year are correct."
             )
             return False
+
+        if self.simulation and "Simulator URL" not in self.config:
+            self.log.error(
+                "You are missing the Simulator URL field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
+            )
+            return False
+        elif (
+                requests.get(
+                    f"{self.config['Simulator URL']}/matches"
+                ).status_code
+                == 401
+        ):
+            self.log.error(
+                "The simulator may not be running. Please make sure it is and that it is up-to-date."
+            )
+            return False
+
+        if self.simulation and "Simulator Spreadsheet" not in self.config:
+            self.log.error(
+                "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
+            )
+            return False
+        else:
+            try:
+                gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
+            except gspread.exceptions.SpreadsheetNotFound:
+                self.log.error(
+                    "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."
+                )
+                return False
 
         return True
 
@@ -200,6 +236,7 @@ class DataManager:
         self.log.info(f"Getting data for {self.year + self.event}")
         self.data_input.get_tba_data(self.year + self.event)
         self.data_input.get_sheet_data(self.year + self.event)
+        self.session.commit()
 
     def check_data(self):
         """
@@ -219,11 +256,22 @@ class DataManager:
 
     def refresh(self):
         """
-        Gets Data and then checks it.
+        Gets Data and then checks it and calculates new data.
 
         :return: A dictionary of warnings
         :rtype: Dict[str, List]
         """
         self.get_data()
         warnings = self.check_data()
+        self.calculate_data()
         return warnings
+
+    def start(self):
+        """
+        Starts the ingest
+        """
+        self.refresh()
+
+        while True:
+            self.scheduler.enter(self.interval, 1, self.refresh)
+            self.scheduler.run()

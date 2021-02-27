@@ -1,17 +1,19 @@
 from DataManager import DataManager
 import sys
 
-
-
-#try:
 if '--skip-validation' in sys.argv[1:]:
-    dm = DataManager(skip_validation=True)
+    skip_validation = True
 else:
-    dm = DataManager(skip_validation=False)
+    skip_validation = False
 
+if '--refresh-time' in sys.argv[1:]:
+    refresh_time = int(sys.argv[sys.argv.index('--refresh-time')+1])
+else:
+    refresh_time = 180
 
-dm.get_data()
-dm.check_data()
-dm.calculate_data()
-# except Exception as e:
-#     print(e)
+if "--simulation" in sys.argv[1:]:
+    simulation = True
+
+dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
+
+dm.start()

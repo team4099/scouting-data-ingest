@@ -22,7 +22,7 @@ from loguru import logger
 
 # Main Input Object that will handle all the input
 class DataInput:
-    def __init__(self, engine, session, connection, dataAccessor):
+    def __init__(self, engine, session, connection, dataAccessor, simulation=False):
         # Get logger
         self.log = logger.opt(colors=True).bind(color="light-magenta")
 
@@ -47,10 +47,12 @@ class DataInput:
         self.log.info("Initializing Variables")
         self.TeamDataObject = None
         self.MatchDataObject = None
+        self.simulation = simulation
 
         # Set as early as possible to make sure the first TBA response on load will provide data
-        self.tbaLastModified = "Wed, 1 Jan 100 00:00:01 GMT"
-        self.sheetLastModified = None
+        self.tba_last_modified = "Wed, 1 Jan 1000 00:00:01 GMT"
+        self.sheet_last_modified = None
+        self.last_tba_time = 0
 
         # Object to represent worksheet
         self.sheet = None
@@ -78,29 +80,32 @@ class DataInput:
         self.log.info("Loading TBA Data")
         headers = {
             "X-TBA-Auth-Key": self.config["TBA-Key"],
-            "If-Modified-Since": self.tbaLastModified,
+            "If-Modified-Since": self.tba_last_modified,
         }
-        r = requests.get(
-            f"https://www.thebluealliance.com/api/v3/event/{event}/matches",
-            headers=headers,
-        )
+        url = f"{self.config['Simulator URL']}/matches" if self.simulation else f"https://www.thebluealliance.com/api/v3/event/{event}/matches"
+        r = requests.get(url,headers=headers)
 
         # Stop if we don't get a proper response
-        if r.status_code != 200:
+        if r.status_code != 200 and r.status_code != 304:
             self.log.error(
                 f"Data not successfully retrieved with status code {r.status_code}"
             )
             return r.status_code
+        elif r.status_code == 304:
+            self.log.info("TBA has not been changed. It will not be updated.")
+            return r.status_code
         self.log.info("Data successfully retrieved")
-        self.tbaLastModified = r.headers["Last-Modified"]
+        self.tba_last_modified = r.headers["Last-Modified"]
         self.log.info("Normalizing and Cleaning Data")
 
         # Flatten the data and sort it so matches are entered in a sane way
         data = pd.json_normalize(r.json())
+        data.convert_dtypes()
+        data = data[data["actual_time"] > self.last_tba_time]
+        self.last_tba_time = data["actual_time"].iloc[-1]
         data = data.sort_values(by="actual_time")
 
         self.log.info("Getting Datatypes")
-        data = data.convert_dtypes()
         # Drop all the columns we don't need in a manner being careful to check if they exist
         drop_list = [
             "videos",
@@ -145,14 +150,14 @@ class DataInput:
         data.columns = data.columns.str.replace(' ', '_')
 
         # If the sheet hasn't been modified, do nothing
-        if self.sheetLastModified is None:
+        if self.sheet_last_modified is None:
             pass
-        elif (
-                datetime.strptime(data.iloc[-1:]["Timestamp"][0], "%m/%d/%Y %H:%M:%S")
-                > self.sheetLastModified
-        ):
+        elif datetime.strptime(data.iloc[-1:]["Timestamp"].iloc[0], "%m/%d/%Y %H:%M:%S") <= self.sheet_last_modified:
+            self.log.info("The sheet has not been modified. The data will not be updated.")
             return
 
+        self.log.info("Clearing Old Data")
+        self.dataAccessor.delete_team_data()
         self.log.info("Adding Team Data")
         # Format Data
         data['Team_Number'] = 'frc' + data['Team_Number'].astype(str)
@@ -173,7 +178,7 @@ class DataInput:
                 self.log.warning("This TeamData already exists. It will not be added.")
         self.log.info("Commiting changes")
         self.session.commit()
-        self.sheetLastModified = datetime.strptime(
+        self.sheet_last_modified = datetime.strptime(
             data.iloc[-1:]["Timestamp"].iloc[0], "%m/%d/%Y %H:%M:%S"
         )
         self.log.info("Finished getting sheet data")
@@ -184,11 +189,12 @@ class DataInput:
         """
         headers = {
             "X-TBA-Auth-Key": self.config["TBA-Key"],
-            "If-Modified-Since": self.tbaLastModified,
+            "If-Modified-Since": self.tba_last_modified,
         }
         self.log.info("Getting TBA Data")
+        url = f"{self.config['Simulator URL']}/matches" if self.simulation else f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}{self.config["Event"]}/matches'
         r = requests.get(
-            f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}vahay/matches',
+            url,
             headers=headers,
         )
         self.log.info("Cleaning and Preparing data")
@@ -224,7 +230,10 @@ class DataInput:
                 )
         self.log.info("Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
-        self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
+        if self.simulation:
+            self.sheet = gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
+        else:
+            self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
         self.log.info("Cleaning and Preparing Data")
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]

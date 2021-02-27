@@ -40,7 +40,7 @@ class DataAccessor:
         :return: A Dataframe containing the Team IDs
         :rtype: pandas.DataFrame
         """
-        return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement, self.connection)['id'])
+        return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement, self.sql_connection())['id'])
 
     def get_team_data(self, team_id=None, match_key=None, color=None, driver_station=None, type_df: bool = True):
         """
@@ -71,7 +71,7 @@ class DataAccessor:
             query = query.filter(self.TeamDataObject.Driver_Station == driver_station)
 
         if type_df:
-            return pd.read_sql_query(query.statement, self.connection)
+            return pd.read_sql_query(query.statement, self.sql_connection())
         else:
             return query[:]
 
@@ -96,7 +96,7 @@ class DataAccessor:
             query = query.filter(self.MatchDataObject.Alliance == color)
 
         if type_df:
-            return pd.read_sql_query(query.statement, self.connection)
+            return pd.read_sql_query(query.statement, self.sql_connection())
         else:
             return query[:]
 
@@ -177,6 +177,22 @@ class DataAccessor:
 
         self.session.add(m)
 
+    def delete_calculated_team_data(self, team_id=None):
+        query = self.session.query(self.CalculatedTeamDataObject)
+        if team_id is not None:
+            query = query.filter(self.CalculatedTeamDataObject.teamid == team_id)
+
+        query.delete()
+
+    def delete_team_data(self, team_id=None, match_key=None):
+        query = self.session.query(self.TeamDataObject)
+        if team_id is not None:
+            query = query.filter(self.TeamDataObject.teamid == team_id)
+        if match_key is not None:
+            query = query.filter(self.TeamDataObject.Match_Key == match_key)
+
+        query.delete()
+
     def check_if_team_data_exists(self, team_id, match_key):
         """
 
@@ -210,7 +226,7 @@ class DataAccessor:
         with self.session.no_autoflush:
             ((ret,),) = self.session.query(
                 exists()
-                .where(self.CalculatedTeamDataObject.id == team_id)
+                .where(self.CalculatedTeamDataObject.teamid == team_id)
             )
         return ret
 
@@ -264,3 +280,6 @@ class DataAccessor:
                 .where(Matches.id == match_key)
             )
         return ret
+
+    def sql_connection(self):
+        return self.engine.connect()
