@@ -1,6 +1,8 @@
 # scouting-data-ingest
 Ingest scouting data from TBA and scouts and transfer it to Tableau and other visualizations
 
+Powered by [The Blue Alliance](https://www.thebluealliance.com/).
+
 ## Set Up
 
 Firstly, clone this project with: 
