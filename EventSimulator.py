@@ -52,6 +52,8 @@ def updateSheet(match):
 @app.route('/form')
 def form():
     global currMatch
+    if int(request.args['match_num']) < currMatch:
+        return render_template('main.html', count=currMatch, max_matches=max_matches, warning="Next match must be higher. Restart if you want to see what happens at a lower match number.")
     currMatch = int(request.args['match_num'])
     updateSheet(currMatch)
     global lastModified
@@ -63,4 +65,7 @@ def form():
 def index():
     return render_template('main.html', count=currMatch, max_matches=max_matches)
 
-app.run()
+
+if __name__ == "__main__":
+    updateSheet(currMatch)
+    app.run()

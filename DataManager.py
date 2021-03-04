@@ -5,6 +5,7 @@ import time
 import gspread
 import pymysql
 import requests
+import urllib3
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import json
@@ -200,12 +201,13 @@ class DataManager:
                 "You are missing the Simulator URL field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
             )
             return False
-        elif (
-                requests.get(
-                    f"{self.config['Simulator URL']}/matches"
-                ).status_code
-                == 401
-        ):
+        try:
+            simulator_status = requests.get(f"{self.config['Simulator URL']}/matches").status_code
+        except ConnectionRefusedError or urllib3.exceptions.NewConnectionError or requests.exceptions.ConnectionError:
+            self.log.error("The simulator may not be running or it's at a different url than the one provided.")
+            return False
+
+        if simulator_status == 401:
             self.log.error(
                 "The simulator may not be running. Please make sure it is and that it is up-to-date."
             )
