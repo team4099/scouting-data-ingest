@@ -11,10 +11,13 @@ if '--refresh-time' in sys.argv[1:]:
 else:
     refresh_time = 180
 
+simulation = False
+
 if "--simulation" in sys.argv[1:]:
     simulation = True
+
 try:
     dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
     dm.start()
-except Exception:
-    pass
+except Exception as e:
+    print(e)
