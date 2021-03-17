@@ -8,12 +8,14 @@ from SQLObjects import Base, Teams
 from terminal import console, logger
 import pandas as pd
 from re import search
+from sklearn.preprocessing import MultiLabelBinarizer
+from scipy.sparse.linalg import lsmr
 
 
 class DataCalculator:
     def __init__(self, engine, session, connection, dataAccessor):
         self.log = logger.opt(colors=True).bind(color="yellow")
-
+        
         self.log.info("Starting DataCalculator")
         # Loading configuration
         self.log.info("Loading Configuration")
@@ -166,6 +168,26 @@ class DataCalculator:
             self.data_accessor.add_calculated_team_data(row[0], row[1])
         self.session.commit()
 
+    def calculate_opr(self, metric):
+        team_lists = self.data_accessor.get_teams_in_match()
+        team_lists.index = team_lists.index.sortlevel(1, ascending=True, sort_remaining=True)[0]
+        team_lists = pd.DataFrame(team_lists).reset_index().rename({"Match_Key":"matchId"},axis=1)
+        metric_data = self.data_accessor.get_match_data(type_df=True)[[f"score_breakdown.red.{metric}",f"score_breakdown.blue.{metric}","matchId"]].sort_values(by="matchId")
+        blue_data = metric_data[[f"score_breakdown.blue.{metric}","matchId"]].rename({f"score_breakdown.blue.{metric}":metric},axis=1)
+        red_data = metric_data[[f"score_breakdown.red.{metric}","matchId"]].rename({f"score_breakdown.red.{metric}":metric},axis=1)
+        blue_data["Alliance"] = "Blue"
+        red_data["Alliance"] = "Red"
+        merged_data = blue_data.append(red_data)
+
+        assembled_data = pd.merge(team_lists,merged_data,on=["matchId","Alliance"], how="inner")[["teamid",metric]]
+        mlb = MultiLabelBinarizer(sparse_output=True)
+        sparse_teams = mlb.fit_transform(assembled_data["teamid"])
+        oprs = lsmr(sparse_teams,assembled_data[metric].to_numpy())
+        teams_with_oprs = pd.DataFrame([mlb.classes_,oprs[0]]).transpose()
+        teams_with_oprs.rename({0:"teams",1:f"{metric}_opr"},inplace=True,axis=1)
+        teams_with_oprs.set_index("teams",inplace=True)
+        return teams_with_oprs
+
     def calculate_team_data(self):
         """
             Calculates Team Data
@@ -197,6 +219,8 @@ class DataCalculator:
             replacements={"Yes": 1, "No": 0})
         climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False)
 
+        oprs = self.calculate_opr("totalPoints")
+
         self.log.info("Adding data to SQL")
         self.team_data_to_sql(
             [
@@ -215,7 +239,8 @@ class DataCalculator:
                 fouls_med,
                 climb_time_med,
                 shooting_zone_pct,
-                climb_type_pct
+                climb_type_pct,
+                oprs
             ]
         )
         # OPR (xOPR or ixOPR)

@@ -92,13 +92,19 @@ class DataAccessor:
         query = self.session.query(self.MatchDataObject)
         if match_key is not None:
             query = query.filter(self.MatchDataObject.matchId == match_key)
-        if color is not None:
-            query = query.filter(self.MatchDataObject.Alliance == color)
-
         if type_df:
             return pd.read_sql_query(query.statement, self.sql_connection())
         else:
             return query[:]
+
+    def get_teams_in_match(self, match_key=None):
+        query = self.session.query(self.TeamDataObject)
+
+        if match_key is not None:
+            query = query.filter(self.TeamDataObject.Match_Key.in_(match_key))
+
+        data = pd.read_sql_query(query.statement, self.sql_connection())
+        return data.groupby(["Match_Key","Alliance"])["teamid"].apply(list)
 
     def add_match_data(self, key: str, data):
         """

@@ -196,36 +196,38 @@ class DataManager:
             )
             return False
 
-        if self.simulation and "Simulator URL" not in self.config:
-            self.log.error(
-                "You are missing the Simulator URL field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
-            )
-            return False
-        try:
-            simulator_status = requests.get(f"{self.config['Simulator URL']}/matches").status_code
-        except ConnectionRefusedError or urllib3.exceptions.NewConnectionError or requests.exceptions.ConnectionError:
-            self.log.error("The simulator may not be running or it's at a different url than the one provided.")
-            return False
-
-        if simulator_status == 401:
-            self.log.error(
-                "The simulator may not be running. Please make sure it is and that it is up-to-date."
-            )
-            return False
-
-        if self.simulation and "Simulator Spreadsheet" not in self.config:
-            self.log.error(
-                "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
-            )
-            return False
-        else:
-            try:
-                gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
-            except gspread.exceptions.SpreadsheetNotFound:
+        if self.simulation:
+            if "Simulator URL" not in self.config:
                 self.log.error(
-                    "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."
+                    "You are missing the Simulator URL field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
                 )
                 return False
+
+            try:
+                simulator_status = requests.get(f"{self.config['Simulator URL']}/matches").status_code
+            except ConnectionRefusedError or urllib3.exceptions.NewConnectionError or requests.exceptions.ConnectionError:
+                self.log.error("The simulator may not be running or it's at a different url than the one provided.")
+                return False
+
+            if simulator_status == 401:
+                self.log.error(
+                    "The simulator may not be running. Please make sure it is and that it is up-to-date."
+                )
+                return False
+
+            if "Simulator Spreadsheet" not in self.config:
+                self.log.error(
+                    "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
+                )
+                return False
+            else:
+                try:
+                    gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
+                except gspread.exceptions.SpreadsheetNotFound:
+                    self.log.error(
+                        "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."
+                    )
+                    return False
 
         return True
 

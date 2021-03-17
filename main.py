@@ -18,6 +18,6 @@ if "--simulation" in sys.argv[1:]:
 
 try:
     dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
-    dm.start()
+    dm.refresh()
 except Exception as e:
     print(e)
