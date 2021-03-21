@@ -10,7 +10,7 @@ from loguru import logger
 class DataProcessor:
     """Validates Data in multiple metrics"""
 
-    def __init__(self, data_accessor, err_cond=2):
+    def __init__(self, data_accessor, config, err_cond=2):
         """
 
         :param data_accessor: An initialized DataAccessor object
@@ -18,13 +18,11 @@ class DataProcessor:
         :param err_cond: A tolerance value for data errors. Differences between data less than this value will be accepted.
         :type err_cond: int
         """
-        self.log = logger.opt(colors=True).bind(color="light-yellow")
+        self.log = logger.opt(colors=True)
 
         self.log.info("Starting DataProcessor")
         # Loading configuration
         self.log.info("Loading Configuration")
-        with open("config/config.json") as f:
-            config = json.load(f)
 
         self.config = config
         self.data_accessor = data_accessor

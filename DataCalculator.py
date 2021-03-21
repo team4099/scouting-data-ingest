@@ -13,14 +13,12 @@ from scipy.sparse.linalg import lsmr
 
 
 class DataCalculator:
-    def __init__(self, engine, session, connection, dataAccessor):
-        self.log = logger.opt(colors=True).bind(color="yellow")
+    def __init__(self, engine, session, connection, config, data_accessor):
+        self.log = logger.opt(colors=True)
         
         self.log.info("Starting DataCalculator")
         # Loading configuration
         self.log.info("Loading Configuration")
-        with open("config/config.json") as f:
-            config = json.load(f)
 
         self.config = config
 
@@ -32,7 +30,7 @@ class DataCalculator:
 
         self.log.info("Initializing Variables")
         self.team_list = pd.DataFrame()
-        self.data_accessor = dataAccessor
+        self.data_accessor = data_accessor
         self.calculated_team_data_object = None
         self.sql_configured = False
 
@@ -132,7 +130,7 @@ class DataCalculator:
                     f"{dtype} is not a configured datatype. It will not be used."
                 )
         t_data = {
-            "__tablename__": f'CalculatedTeamData{self.config["Year"]}',
+            "__tablename__": f'CalculatedTeamData{self.config.year}',
             "__table_args__": {"extend_existing": True},
         }
 
@@ -142,13 +140,13 @@ class DataCalculator:
             k: eval(v) for k, v in calc_data_config.items()
         }
         self.calculated_team_data_object = type(
-            f'CalculatedTeamData{self.config["Year"]}',
+            f'CalculatedTeamData{self.config.year}',
             (Base,),
             {**calc_data_config, **t_data},
         )
         self.data_accessor.CalculatedTeamDataObject = self.calculated_team_data_object
         self.session.flush()
-        Base.metadata.tables[f'CalculatedTeamData{self.config["Year"]}'].create(bind=self.engine)
+        Base.metadata.tables[f'CalculatedTeamData{self.config.year}'].create(bind=self.engine)
         self.session.commit()
         self.sql_configured = True
 

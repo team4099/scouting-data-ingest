@@ -26,6 +26,8 @@ class Formatter:
             color = "cyan"
         elif mod == "DataAccessor":
             color = "light-green"
+        else:
+            color = "white"
 
         return self.fmt.replace('{module: <14}',f"<{color}>"+"{module: <14}"+f"</{color}>")
 

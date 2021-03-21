@@ -6,14 +6,12 @@ from SQLObjects import Matches, Teams
 
 
 class DataAccessor:
-    def __init__(self, engine, session, connection):
-        self.log = logger.opt(colors=True).bind(color="cyan")
+    def __init__(self, engine, session, connection, config):
+        self.log = logger.opt(colors=True)
 
         self.log.info("Starting DataAccessor")
         # Loading configuration
         self.log.info("Loading Configuration")
-        with open("config/config.json") as f:
-            config = json.load(f)
 
         self.config = config
 

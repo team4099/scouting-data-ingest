@@ -22,15 +22,13 @@ from loguru import logger
 
 # Main Input Object that will handle all the input
 class DataInput:
-    def __init__(self, engine, session, connection, dataAccessor, simulation=False):
+    def __init__(self, engine, session, connection, config, dataAccessor):
         # Get logger
-        self.log = logger.opt(colors=True).bind(color="light-magenta")
+        self.log = logger.opt(colors=True)
 
         self.log.info("Starting DataInput")
         # Loading configuration
         self.log.info("Loading Configuration")
-        with open("config/config.json") as f:
-            config = json.load(f)
 
         self.config = config
 
@@ -47,7 +45,6 @@ class DataInput:
         self.log.info("Initializing Variables")
         self.TeamDataObject = None
         self.MatchDataObject = None
-        self.simulation = simulation
 
         # Set as early as possible to make sure the first TBA response on load will provide data
         self.tba_last_modified = "Wed, 1 Jan 1000 00:00:01 GMT"
@@ -79,10 +76,14 @@ class DataInput:
         """
         self.log.info("Loading TBA Data")
         headers = {
-            "X-TBA-Auth-Key": self.config["TBA-Key"],
+            "X-TBA-Auth-Key": self.config.tba_key,
             "If-Modified-Since": self.tba_last_modified,
         }
-        url = f"{self.config['Simulator URL']}/matches" if self.simulation else f"https://www.thebluealliance.com/api/v3/event/{event}/matches"
+        if self.config.simulation:
+            url = f"{self.config.simulator_url}/matches"
+        else:
+            url = f"https://www.thebluealliance.com/api/v3/event/{event}/matches"
+
         r = requests.get(url,headers=headers)
 
         # Stop if we don't get a proper response
@@ -176,7 +177,7 @@ class DataInput:
                 self.dataAccessor.add_team_data(team_number, row_data['Match_Key'], row_data)
             else:
                 self.log.warning("This TeamData already exists. It will not be added.")
-        self.log.info("Commiting changes")
+        self.log.info("Committing changes")
         self.session.commit()
         self.sheet_last_modified = datetime.strptime(
             data.iloc[-1:]["Timestamp"].iloc[0], "%m/%d/%Y %H:%M:%S"
@@ -188,11 +189,14 @@ class DataInput:
             Parses the Config file
         """
         headers = {
-            "X-TBA-Auth-Key": self.config["TBA-Key"],
+            "X-TBA-Auth-Key": self.config.tba_key,
             "If-Modified-Since": self.tba_last_modified,
         }
         self.log.info("Getting TBA Data")
-        url = f"{self.config['Simulator URL']}/matches" if self.simulation else f'https://www.thebluealliance.com/api/v3/event/{self.config["Year"]}{self.config["Event"]}/matches'
+        if self.config.simulation:
+            url = f"{self.config.simulator_url}/matches"
+        else:
+            url = f"https://www.thebluealliance.com/api/v3/event/{self.config.event}/matches"
         r = requests.get(
             url,
             headers=headers,
@@ -230,7 +234,7 @@ class DataInput:
                 )
         self.log.info("Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
-        if self.simulation:
+        if self.config.simulation:
             self.sheet = gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
         else:
             self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)

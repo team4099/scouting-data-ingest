@@ -16,8 +16,9 @@ simulation = False
 if "--simulation" in sys.argv[1:]:
     simulation = True
 
-try:
-    dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
+
+dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
+if simulation:
+    dm.start()
+else:
     dm.refresh()
-except Exception as e:
-    print(e)
