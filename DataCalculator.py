@@ -13,7 +13,7 @@ from scipy.sparse.linalg import lsmr
 
 
 class DataCalculator:
-    def __init__(self, engine, session, connection, config, data_accessor):
+    def __init__(self, engine, session, connection, data_accessor, config):
         self.log = logger.opt(colors=True)
         
         self.log.info("Starting DataCalculator")

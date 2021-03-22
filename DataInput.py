@@ -22,7 +22,7 @@ from loguru import logger
 
 # Main Input Object that will handle all the input
 class DataInput:
-    def __init__(self, engine, session, connection, config, dataAccessor):
+    def __init__(self, engine, session, connection, dataAccessor, config):
         # Get logger
         self.log = logger.opt(colors=True)
 
@@ -196,7 +196,7 @@ class DataInput:
         if self.config.simulation:
             url = f"{self.config.simulator_url}/matches"
         else:
-            url = f"https://www.thebluealliance.com/api/v3/event/{self.config.event}/matches"
+            url = f"https://www.thebluealliance.com/api/v3/event/{self.config.year}{self.config.event}/matches"
         r = requests.get(
             url,
             headers=headers,
@@ -230,14 +230,14 @@ class DataInput:
                 matchDataConfig[col] = f"Column(Boolean())"
             else:
                 self.log.warning(
-                    f"{dtype} is not a configured datatype. It will not be used."
+                    f"In {col}, {dtype} is not a configured datatype. It will not be used."
                 )
         self.log.info("Getting sheet data")
-        gc = gspread.service_account(f'./config/{self.config["Google-Credentials"]}')
+        gc = gspread.service_account(f'./config/{self.config.google_credentials}')
         if self.config.simulation:
-            self.sheet = gc.open(f'{self.config["Simulator Spreadsheet"]}').get_worksheet(0)
+            self.sheet = gc.open(f'{self.config.simulator_spreadsheet}').get_worksheet(0)
         else:
-            self.sheet = gc.open(f'{self.config["Spreadsheet"]}').get_worksheet(0)
+            self.sheet = gc.open(f'{self.config.spreadsheet}').get_worksheet(0)
         self.log.info("Cleaning and Preparing Data")
         data = pd.DataFrame(self.sheet.get_all_records())
         drop_list = ["Team Number"]
@@ -261,15 +261,15 @@ class DataInput:
                 teamDataConfig[col] = f"Column(Boolean())"
             else:
                 self.log.warning(
-                    f"{dtype} is not a configured datatype. It will not be used."
+                    f"In {col}, {dtype} is not a configured datatype. It will not be used."
                 )
         SQLConfig = {
             "TeamDataConfig": {
-                "Year": self.config["Year"],
+                "Year": self.config.year,
                 "Attributes": teamDataConfig,
             },
             "MatchDataConfig": {
-                "Year": self.config["Year"],
+                "Year": self.config.year,
                 "Attributes": matchDataConfig,
             },
         }
