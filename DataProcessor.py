@@ -32,18 +32,20 @@ class DataProcessor:
         self.last_checked = None
         self.errors = []
         self.error_condition = err_cond
+        self.team_data = None
+        self.match_data = None
 
         self.log.info("DataProcessor Loaded!")
 
-    def check_equals_by_alliance(self, team_columns, match_columns, team_weights=None, match_weights=None):
+    def check_equals_by_alliance(self, team_metrics, match_metrics, team_weights=None, match_weights=None):
         """ Checks if the sum of a metric across an Alliance is equal to a metric for that Alliance in TBA.
 
         Given a weights list, this function will apply it to the metrics.
 
-        :param team_columns: A Dataframe containing Team IDs, Match Keys and the metric(s) to be validated.
-        :type team_columns: pandas.core.frame.DataFrame
-        :param match_columns: A dictionary of dataframes for each color containing the Match Keys and metric(s) to be analyzed.
-        :type match_columns: Dict[str, pandas.core.frame.DataFrame]
+        :param team_metrics: A list containing the name of the column(s) containing the metric(s) to be analyzed.
+        :type team_metrics: List[str]
+        :param match_metrics: A dictionary of lists for each color containing the metric(s) to be analyzed.
+        :type match_metrics: Dict[str, List[str]]
         :param team_weights: A list of weights for the metric columns.
         :type team_weights: None
         :param match_weights: A list of weights for the metric columns.
@@ -52,8 +54,9 @@ class DataProcessor:
         :rtype: List[str]
         """
         warnings = []
-        team_metrics = [col for col in team_columns.columns if col != "Match_Key" and col != "teamid"]
-        match_metrics = [[col for col in match_columns[color].columns if col != "matchId"] for color in match_columns.keys()]
+        team_columns = self.team_data.loc[:, ["teamid", "Match_Key"] + team_metrics]
+        match_columns = {key:self.match_data.loc[:,["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
+        match_metrics = match_metrics.values()
 
         # Check if there are any matches in TeamData that aren't in MatchData and warn us
         team_matches = set(team_columns["Match_Key"].unique())
@@ -104,19 +107,21 @@ class DataProcessor:
 
         return warnings
 
-    def check_same(self, team_column, match_column):
+    def check_same(self, team_column, match_metrics):
         """
 
         Check if a metric is the same for each robot in team_data and match_data using driver stations.
 
         :param team_column: A Dataframe containing Team IDs, Match Keys and the metric to be validated.
         :type team_column: pandas.DataFrame
-        :param match_column: A dictionary of dataframes for each color containing the Match Keys and metric to be analyzed.
-        :type match_column: Dict[str, pandas.DataFrame]
+        :param match_metrics: A dictionary of lists for each color containing the metric(s) to be analyzed.
+        :type match_metrics: Dict[str, List[str]]
         :return: A list of warnings
         :rtype: List[str]
         """
         warnings = []
+        match_column = {key:self.match_data.loc[:,["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
+
 
         # Check if there are any matches in TeamData that aren't in MatchData and warn us
         team_matches = set(team_column["Match_Key"].unique())
@@ -164,16 +169,17 @@ class DataProcessor:
 
         return warnings
 
-    def check_key(self, team_data_column):
+    def check_key(self, team_data_column_name):
         """
 
         Checks if any keys do not follow the appropriate format or have been entered incorrectly.
 
-        :param team_data_column: A list of keys.
-        :type team_data_column: pandas.Series
+        :param team_data_column_name: The column name in which the keys are stored.
+        :type team_data_column_name: str
         :return: A list of warnings
         :rtype: List[str]
         """
+        team_data_column = self.team_data[team_data_column_name]
         warnings = []
         for index, key in team_data_column.iteritems():
             if not search(r"2020[a-z]{4,5}_(qm|sf|qf|f)\d{1,2}(m\d{1})*", key):
@@ -196,58 +202,38 @@ class DataProcessor:
         self.log.info("Validating Data")
         self.log.info("Loading Data")
 
+        self.team_data = self.data_accessor.get_team_data()
         team_data = self.data_accessor.get_team_data()
         match_data = self.data_accessor.get_match_data()
+        self.match_data = self.data_accessor.get_match_data()
 
         self.log.info("Checking TeamData match keys")
-        warnings["Match Key Violations"] = self.check_key(team_data["Match_Key"])
+        warnings["Match Key Violations"] = self.check_key("Match_Key")
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
         warnings["Auto Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Auto_Low_Goal"]],
+            ["Auto_Low_Goal"],
             {
-                "Blue": match_data.loc[
-                        :, ["matchId", "score_breakdown.blue.autoCellsBottom"]
-                        ],
-                "Red": match_data.loc[
-                       :, ["matchId", "score_breakdown.red.autoCellsBottom"]
-                       ],
+                "Blue": ["score_breakdown.blue.autoCellsBottom"],
+                "Red": ["score_breakdown.red.autoCellsBottom"]
             },
         )
 
         self.log.info("Checking for Auto Power Cell High Goal Violations")
         warnings["Auto Power Cell High Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Auto_High_Goal"]],
+            ["Auto_High_Goal"],
             {
-                "Blue": match_data.loc[
-                        :,
-                        [
-                            "matchId",
-                            "score_breakdown.blue.autoCellsInner",
-                            "score_breakdown.blue.autoCellsOuter",
-                        ],
-                        ],
-                "Red": match_data.loc[
-                       :,
-                       [
-                           "matchId",
-                           "score_breakdown.red.autoCellsInner",
-                           "score_breakdown.red.autoCellsOuter",
-                       ],
-                       ],
+                "Blue": ["score_breakdown.blue.autoCellsInner", "score_breakdown.blue.autoCellsOuter"],
+                "Red": ["score_breakdown.red.autoCellsInner", "score_breakdown.red.autoCellsOuter"],
             },
         )
 
         self.log.info("Checking for Teleop Power Cell Low Goal Violations")
         warnings["Teleop Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Teleop_Low_Goal"]],
+            ["Teleop_Low_Goal"],
             {
-                "Blue": match_data.loc[
-                        :, ["matchId", "score_breakdown.blue.teleopCellsBottom"]
-                        ],
-                "Red": match_data.loc[
-                       :, ["matchId", "score_breakdown.red.teleopCellsBottom"]
-                       ],
+                "Blue": ["score_breakdown.blue.teleopCellsBottom"],
+                "Red": ["score_breakdown.red.teleopCellsBottom"],
             },
         )
 
@@ -255,24 +241,10 @@ class DataProcessor:
             "Checking for Teleop Power Cell High Goal Violations"
         )
         warnings["Teleop Power Cell High Goal Violations"] = self.check_equals_by_alliance(
-            team_data.loc[:, ["teamid", "Match_Key", "Teleop_High_Goal"]],
+            ["Teleop_High_Goal"],
             {
-                "Blue": match_data.loc[
-                        :,
-                        [
-                            "matchId",
-                            "score_breakdown.blue.teleopCellsInner",
-                            "score_breakdown.blue.teleopCellsOuter",
-                        ],
-                        ],
-                "Red": match_data.loc[
-                       :,
-                       [
-                           "matchId",
-                           "score_breakdown.red.teleopCellsInner",
-                           "score_breakdown.red.teleopCellsOuter",
-                       ],
-                       ],
+                "Blue": ["score_breakdown.blue.teleopCellsInner", "score_breakdown.blue.teleopCellsOuter"],
+                "Red": ["score_breakdown.red.teleopCellsInner", "score_breakdown.red.teleopCellsOuter"],
             },
         )
 
@@ -282,23 +254,15 @@ class DataProcessor:
                 .replace(pd.NA, "Unknown")
                 .replace("No Climb", "None"),
             {
-                "Blue": match_data.loc[
-                        :,
-                        [
-                            "matchId",
+                "Blue": [
                             "score_breakdown.blue.endgameRobot1",
                             "score_breakdown.blue.endgameRobot2",
                             "score_breakdown.blue.endgameRobot3",
                         ],
-                        ],
-                "Red": match_data.loc[
-                       :,
-                       [
-                           "matchId",
+                "Red": [
                            "score_breakdown.red.endgameRobot1",
                            "score_breakdown.red.endgameRobot2",
-                           "score_breakdown.red.endgameRobot3",
-                       ],
+                           "score_breakdown.red.endgameRobot3"
                        ],
             },
         )
