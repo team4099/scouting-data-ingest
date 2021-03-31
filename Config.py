@@ -162,7 +162,7 @@ class Config:
 
             try:
                 simulator_status = requests.get(f"{self.simulator_url}/matches").status_code
-            except ConnectionRefusedError or urllib3.exceptions.NewConnectionError or requests.exceptions.ConnectionError:
+            except (ConnectionRefusedError, urllib3.exceptions.NewConnectionError, requests.exceptions.ConnectionError):
                 self.log.error("The simulator may not be running or it's at a different url than the one provided.")
                 return False
 
@@ -172,7 +172,7 @@ class Config:
                 )
                 return False
 
-            if self.simulator_spreadsheet:
+            if self.simulator_spreadsheet is None:
                 self.log.error(
                     "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
                 )

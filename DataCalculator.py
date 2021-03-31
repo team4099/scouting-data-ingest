@@ -76,7 +76,7 @@ class DataCalculator:
         team_data_average = team_data_average.rename(columns={col: col + "_med"})
         return team_data_average.set_index('id')
 
-    def calculate_team_percentages(self, cols, one_hot_encoded=True, replacements=None):
+    def calculate_team_percentages(self, cols, one_hot_encoded=True, replacements=None, possible_values=None):
         """
 
         Calculates percentages by team for a metric.
@@ -87,6 +87,8 @@ class DataCalculator:
         :type one_hot_encoded: Union[bool, None]
         :param replacements: A dict to map string values to integers
         :type replacements: Union[Dict[str, int], None]
+        :type possible_values: A list of possible values if using one-hot encoding
+        :type possible_values: Union[List[str], None]
         :return: A Dataframe of percentages
         :rtype: pandas.DataFrame
         """
@@ -96,6 +98,8 @@ class DataCalculator:
         if not one_hot_encoded:
             team_data_encoded = pd.get_dummies(team_data[cols])
             team_data[team_data_encoded.columns] = team_data_encoded[team_data_encoded.columns]
+            unused_col_names = [f"{col}_{name}" for col in cols for name in possible_values if f"{col}_{name}" not in team_data_encoded.columns ]
+            team_data[unused_col_names] = pd.DataFrame(data=0, index=team_data_encoded.index, columns=unused_col_names)
         if replacements is not None:
             for k, v in replacements.items():
                 team_data = team_data.replace(k, v)
@@ -215,7 +219,7 @@ class DataCalculator:
         shooting_zone_pct = self.calculate_team_percentages(
             ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
             replacements={"Yes": 1, "No": 0})
-        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False)
+        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No Climb'])
 
         oprs = self.calculate_opr("totalPoints")
 
