@@ -1,8 +1,8 @@
-import json
-from sqlalchemy import exists
-from terminal import logger
 import pandas as pd
+from sqlalchemy import exists
+
 from SQLObjects import Matches, Teams
+from terminal import logger
 
 
 class DataAccessor:
@@ -102,7 +102,7 @@ class DataAccessor:
             query = query.filter(self.TeamDataObject.Match_Key.in_(match_key))
 
         data = pd.read_sql_query(query.statement, self.sql_connection())
-        return data.groupby(["Match_Key","Alliance"])["teamid"].apply(list)
+        return data.groupby(["Match_Key", "Alliance"])["teamid"].apply(list)
 
     def add_match_data(self, key: str, data):
         """
@@ -182,6 +182,13 @@ class DataAccessor:
         self.session.add(m)
 
     def delete_calculated_team_data(self, team_id=None):
+        """
+        Deletes a CalculatedTeamData Object from the database.
+
+        :param team_id: A specific Team ID to be deleted
+        :type team_id: str
+        :rtype: None
+        """
         query = self.session.query(self.CalculatedTeamDataObject)
         if team_id is not None:
             query = query.filter(self.CalculatedTeamDataObject.teamid == team_id)
@@ -189,6 +196,15 @@ class DataAccessor:
         query.delete()
 
     def delete_team_data(self, team_id=None, match_key=None):
+        """
+        Deletes a TeamData Object from the database.
+
+        :param team_id: A specific Team ID to be deleted
+        :type team_id: str
+                :param team_id: A specific Team ID to be deleted
+        :type team_id: str
+        :rtype: None
+        """
         query = self.session.query(self.TeamDataObject)
         if team_id is not None:
             query = query.filter(self.TeamDataObject.teamid == team_id)

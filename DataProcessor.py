@@ -1,6 +1,4 @@
-import json
 from re import search
-from typing import Dict, List
 
 import pandas
 import pandas as pd
@@ -55,7 +53,7 @@ class DataProcessor:
         """
         warnings = []
         team_columns = self.team_data.loc[:, ["teamid", "Match_Key"] + team_metrics]
-        match_columns = {key:self.match_data.loc[:,["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
+        match_columns = {key: self.match_data.loc[:, ["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
         match_metrics = match_metrics.values()
 
         # Check if there are any matches in TeamData that aren't in MatchData and warn us
@@ -75,14 +73,14 @@ class DataProcessor:
         # Sum the metric columns into a column called Sum
         team_columns["Sum"] = team_columns[team_metrics].sum(axis=1)
 
-        for (color, data), metrics in zip(match_columns.items(),match_metrics):
+        for (color, data), metrics in zip(match_columns.items(), match_metrics):
             data["Sum"] = data[metrics].sum(axis=1)
 
         # Check the Data by Alliance
         for color, data in match_columns.items():
             # Get the alliance pairings for each color
             alliance_data = self.data_accessor.get_team_data(color=color)[["teamid", "Match_Key"]]
-            for index, row in data.iterrows():
+            for _, row in data.iterrows():
                 curr_match_data = team_columns.loc[team_columns["Match_Key"] == row["matchId"]]
                 if len(curr_match_data.index) < 6:
                     # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.")
@@ -120,8 +118,7 @@ class DataProcessor:
         :rtype: List[str]
         """
         warnings = []
-        match_column = {key:self.match_data.loc[:,["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
-
+        match_column = {key: self.match_data.loc[:, ["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
 
         # Check if there are any matches in TeamData that aren't in MatchData and warn us
         team_matches = set(team_column["Match_Key"].unique())
@@ -129,12 +126,9 @@ class DataProcessor:
         for match in team_matches - tba_matches:
             self.log.error(f"TBA Data for {match} does not exist. It will be skipped")
 
-
         for color, data in match_column.items():
-            for index, row in data.iterrows():
-                curr_match_data = team_column.loc[
-                    team_column["Match_Key"] == row["matchId"]
-                    ]
+            for _, row in data.iterrows():
+                curr_match_data = team_column.loc[team_column["Match_Key"] == row["matchId"]]
                 if len(curr_match_data.index) < 6:
                     # self.log.warning(f"Team Data for {row['matchId']} does not exist. It will be skipped.")
                     # TODO: Re-enable when all matches are added
@@ -203,8 +197,6 @@ class DataProcessor:
         self.log.info("Loading Data")
 
         self.team_data = self.data_accessor.get_team_data()
-        team_data = self.data_accessor.get_team_data()
-        match_data = self.data_accessor.get_match_data()
         self.match_data = self.data_accessor.get_match_data()
 
         self.log.info("Checking TeamData match keys")
@@ -250,20 +242,20 @@ class DataProcessor:
 
         self.log.info("Checking for Endgame Status Violations")
         warnings["Endgame Status Violations"] = self.check_same(
-            team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
-                .replace(pd.NA, "Unknown")
-                .replace("No Climb", "None"),
+            self.team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
+            .replace(pd.NA, "Unknown")
+            .replace("No Climb", "None"),
             {
                 "Blue": [
-                            "score_breakdown.blue.endgameRobot1",
-                            "score_breakdown.blue.endgameRobot2",
-                            "score_breakdown.blue.endgameRobot3",
-                        ],
+                    "score_breakdown.blue.endgameRobot1",
+                    "score_breakdown.blue.endgameRobot2",
+                    "score_breakdown.blue.endgameRobot3",
+                ],
                 "Red": [
-                           "score_breakdown.red.endgameRobot1",
-                           "score_breakdown.red.endgameRobot2",
-                           "score_breakdown.red.endgameRobot3"
-                       ],
+                    "score_breakdown.red.endgameRobot1",
+                    "score_breakdown.red.endgameRobot2",
+                    "score_breakdown.red.endgameRobot3"
+                ],
             },
         )
 

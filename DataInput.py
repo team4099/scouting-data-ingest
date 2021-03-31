@@ -1,23 +1,14 @@
-import gspread
-from sqlalchemy import null
-from sqlalchemy import (
-    Column,
-    BigInteger,
-    ForeignKey,
-    Integer,
-    String,
-    Boolean,
-    Float,
-    Text,
-)
-from sqlalchemy.orm import relationship
-import json
-import numpy
-import requests
-import pandas as pd
 from datetime import datetime
-from SQLObjects import Matches, Teams, Base
+
+import gspread
+import numpy
+import pandas as pd
+import requests
 from loguru import logger
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Boolean, Float, null
+from sqlalchemy.orm import relationship
+
+from SQLObjects import Base, Matches, Teams
 
 
 # Main Input Object that will handle all the input
@@ -84,7 +75,7 @@ class DataInput:
         else:
             url = f"https://www.thebluealliance.com/api/v3/event/{event}/matches"
 
-        r = requests.get(url,headers=headers)
+        r = requests.get(url, headers=headers)
 
         # Stop if we don't get a proper response
         if r.status_code != 200 and r.status_code != 304:
@@ -151,9 +142,7 @@ class DataInput:
         data.columns = data.columns.str.replace(' ', '_')
 
         # If the sheet hasn't been modified, do nothing
-        if self.sheet_last_modified is None:
-            pass
-        elif datetime.strptime(data.iloc[-1:]["Timestamp"].iloc[0], "%m/%d/%Y %H:%M:%S") <= self.sheet_last_modified:
+        if self.sheet_last_modified is not None and datetime.strptime(data.iloc[-1:]["Timestamp"].iloc[0], "%m/%d/%Y %H:%M:%S") <= self.sheet_last_modified:
             self.log.info("The sheet has not been modified. The data will not be updated.")
             return
 
@@ -223,11 +212,11 @@ class DataInput:
         matchDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if pd.Int64Dtype.is_dtype(dtype):
-                matchDataConfig[col] = f"Column(Float())"
+                matchDataConfig[col] = "Column(Float())"
             elif pd.StringDtype.is_dtype(dtype):
-                matchDataConfig[col] = f"Column(Text(500))"
+                matchDataConfig[col] = "Column(Text(500))"
             elif pd.BooleanDtype.is_dtype(dtype):
-                matchDataConfig[col] = f"Column(Boolean())"
+                matchDataConfig[col] = "Column(Boolean())"
             else:
                 self.log.warning(
                     f"In {col}, {dtype} is not a configured datatype. It will not be used."
@@ -250,15 +239,14 @@ class DataInput:
         data = data.replace(r"^\s*$", numpy.nan, regex=True)
         data = data.convert_dtypes()
         self.log.info("Constructing Configuration")
-        teamDataConfig = {
-        }
+        teamDataConfig = {}
         for col, dtype in zip(data.columns, data.dtypes):
             if pd.Int64Dtype.is_dtype(dtype):
-                teamDataConfig[col] = f"Column(Float())"
+                teamDataConfig[col] = "Column(Float())"
             elif pd.StringDtype.is_dtype(dtype):
-                teamDataConfig[col] = f"Column(Text(500))"
+                teamDataConfig[col] = "Column(Text(500))"
             elif pd.BooleanDtype.is_dtype(dtype):
-                teamDataConfig[col] = f"Column(Boolean())"
+                teamDataConfig[col] = "Column(Boolean())"
             else:
                 self.log.warning(
                     f"In {col}, {dtype} is not a configured datatype. It will not be used."

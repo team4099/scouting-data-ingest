@@ -1,14 +1,14 @@
 import time
+
+from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-import json
 
+from Config import Config
+from DataAccessor import DataAccessor
 from DataCalculator import DataCalculator
 from DataInput import DataInput
 from DataProcessor import DataProcessor
-from DataAccessor import DataAccessor
-from Config import Config
-from loguru import logger
 
 
 class DataManager:

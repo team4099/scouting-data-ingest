@@ -1,21 +1,17 @@
-import json
-
 import numpy
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Float, null
-from sqlalchemy.orm import sessionmaker, relationship
-
-from SQLObjects import Base, Teams
-from terminal import console, logger
 import pandas as pd
-from re import search
-from sklearn.preprocessing import MultiLabelBinarizer
 from scipy.sparse.linalg import lsmr
+from sklearn.preprocessing import MultiLabelBinarizer
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, null
+
+from SQLObjects import Base
+from terminal import logger
 
 
 class DataCalculator:
     def __init__(self, engine, session, connection, data_accessor, config):
         self.log = logger.opt(colors=True)
-        
+
         self.log.info("Starting DataCalculator")
         # Loading configuration
         self.log.info("Loading Configuration")
@@ -98,7 +94,7 @@ class DataCalculator:
         if not one_hot_encoded:
             team_data_encoded = pd.get_dummies(team_data[cols])
             team_data[team_data_encoded.columns] = team_data_encoded[team_data_encoded.columns]
-            unused_col_names = [f"{col}_{name}" for col in cols for name in possible_values if f"{col}_{name}" not in team_data_encoded.columns ]
+            unused_col_names = [f"{col}_{name}" for col in cols for name in possible_values if f"{col}_{name}" not in team_data_encoded.columns]
             team_data[unused_col_names] = pd.DataFrame(data=0, index=team_data_encoded.index, columns=unused_col_names)
         if replacements is not None:
             for k, v in replacements.items():
@@ -122,13 +118,13 @@ class DataCalculator:
 
         for col, dtype in zip(df.columns, df.dtypes):
             if dtype == numpy.float64:
-                calc_data_config[col] = f"Column(Float)"
+                calc_data_config[col] = "Column(Float)"
             elif dtype == numpy.int64:
-                calc_data_config[col] = f"Column(Integer)"
+                calc_data_config[col] = "Column(Integer)"
             elif dtype == numpy.object:
-                calc_data_config[col] = f"Column(String(100))"
+                calc_data_config[col] = "Column(String(100))"
             elif dtype == numpy.bool:
-                calc_data_config[col] = f"Column(Boolean())"
+                calc_data_config[col] = "Column(Boolean())"
             else:
                 self.log.warning(
                     f"{dtype} is not a configured datatype. It will not be used."
@@ -173,21 +169,21 @@ class DataCalculator:
     def calculate_opr(self, metric):
         team_lists = self.data_accessor.get_teams_in_match()
         team_lists.index = team_lists.index.sortlevel(1, ascending=True, sort_remaining=True)[0]
-        team_lists = pd.DataFrame(team_lists).reset_index().rename({"Match_Key":"matchId"},axis=1)
-        metric_data = self.data_accessor.get_match_data(type_df=True)[[f"score_breakdown.red.{metric}",f"score_breakdown.blue.{metric}","matchId"]].sort_values(by="matchId")
-        blue_data = metric_data[[f"score_breakdown.blue.{metric}","matchId"]].rename({f"score_breakdown.blue.{metric}":metric},axis=1)
-        red_data = metric_data[[f"score_breakdown.red.{metric}","matchId"]].rename({f"score_breakdown.red.{metric}":metric},axis=1)
+        team_lists = pd.DataFrame(team_lists).reset_index().rename({"Match_Key": "matchId"}, axis=1)
+        metric_data = self.data_accessor.get_match_data(type_df=True)[[f"score_breakdown.red.{metric}", f"score_breakdown.blue.{metric}", "matchId"]].sort_values(by="matchId")
+        blue_data = metric_data[[f"score_breakdown.blue.{metric}", "matchId"]].rename({f"score_breakdown.blue.{metric}": metric}, axis=1)
+        red_data = metric_data[[f"score_breakdown.red.{metric}", "matchId"]].rename({f"score_breakdown.red.{metric}": metric}, axis=1)
         blue_data["Alliance"] = "Blue"
         red_data["Alliance"] = "Red"
         merged_data = blue_data.append(red_data)
 
-        assembled_data = pd.merge(team_lists,merged_data,on=["matchId","Alliance"], how="inner")[["teamid",metric]]
+        assembled_data = pd.merge(team_lists, merged_data, on=["matchId", "Alliance"], how="inner")[["teamid", metric]]
         mlb = MultiLabelBinarizer(sparse_output=True)
         sparse_teams = mlb.fit_transform(assembled_data["teamid"])
-        oprs = lsmr(sparse_teams,assembled_data[metric].to_numpy())
-        teams_with_oprs = pd.DataFrame([mlb.classes_,oprs[0]]).transpose()
-        teams_with_oprs.rename({0:"teams",1:f"{metric}_opr"},inplace=True,axis=1)
-        teams_with_oprs.set_index("teams",inplace=True)
+        oprs = lsmr(sparse_teams, assembled_data[metric].to_numpy())
+        teams_with_oprs = pd.DataFrame([mlb.classes_, oprs[0]]).transpose()
+        teams_with_oprs.rename({0: "teams", 1: f"{metric}_opr"}, inplace=True, axis=1)
+        teams_with_oprs.set_index("teams", inplace=True)
         return teams_with_oprs
 
     def calculate_team_data(self):
@@ -245,6 +241,5 @@ class DataCalculator:
                 oprs
             ]
         )
-        # OPR (xOPR or ixOPR)
         # Consistency scores
         # ELO

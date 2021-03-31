@@ -7,7 +7,7 @@ else:
     skip_validation = False
 
 if '--refresh-time' in sys.argv[1:]:
-    refresh_time = int(sys.argv[sys.argv.index('--refresh-time')+1])
+    refresh_time = int(sys.argv[sys.argv.index('--refresh-time') + 1])
 else:
     refresh_time = 180
 

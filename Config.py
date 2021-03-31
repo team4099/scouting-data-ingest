@@ -147,7 +147,7 @@ class Config:
             )
             return False
 
-        if requests.get(f"https://www.thebluealliance.com/api/v3/event/{self.year}{self.event}",headers={"X-TBA-Auth-Key": self.tba_key}).status_code == 404:
+        if requests.get(f"https://www.thebluealliance.com/api/v3/event/{self.year}{self.event}", headers={"X-TBA-Auth-Key": self.tba_key}).status_code == 404:
             self.log.error(
                 "The event listed in the TBA-Key field is not valid. Please ensure the event key and year are correct."
             )
