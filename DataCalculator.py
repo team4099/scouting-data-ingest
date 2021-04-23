@@ -104,6 +104,15 @@ class DataCalculator:
         team_data_percentages = team_data_percentages.rename(columns={c: c + "_pct" for c in cols})
         return team_data_percentages.set_index('id')
 
+    def calculate_team_percentages_quant(self, cols):
+        team_data = self.data_accessor.get_team_data()[[*cols, 'teamid']]
+        counts = team_data.dropna().groupby('teamid').sum()
+        counts["Sum"] = counts.sum(axis=1)
+        for col in cols:
+            counts[f"{col}_pct"] = counts.loc[:, col] / counts["Sum"]
+        counts.drop(cols, axis=1)
+        return counts
+
     def calculated_team_data_sql_config(self, df):
         """
 
@@ -216,6 +225,7 @@ class DataCalculator:
             ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
             replacements={"Yes": 1, "No": 0})
         climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No Climb'])
+        shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
 
         oprs = self.calculate_opr("totalPoints")
 
@@ -238,6 +248,7 @@ class DataCalculator:
                 climb_time_med,
                 shooting_zone_pct,
                 climb_type_pct,
+                shoot_pct,
                 oprs
             ]
         )
