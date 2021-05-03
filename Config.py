@@ -27,6 +27,7 @@ class Config:
         self.db_user = None
         self.db_pwd = None
         self.event = None
+        self.connected_to_internet = True
 
         self.refresh()
 
@@ -51,6 +52,13 @@ class Config:
         else:
             return None
 
+    def check_internet_connection(self):
+        if requests.get("https://google.com").status_code == 401:
+            self.log.error("It seems that you have no internet connection.")
+            self.connected_to_internet = False
+        else:
+            self.connected_to_internet = True
+
     def validate(self):
         """
 
@@ -64,11 +72,8 @@ class Config:
                 "You are missing the TBA-Key field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
             )
             return False
-        elif requests.get("https://google.com").status_code == 401:
-            self.log.error(
-                "The key listed in the TBA-Key field is not valid. Please ensure the key is correct."
-            )
-            return False
+        
+        self.check_internet_connection()
 
         if self.year is None:
             self.log.error("You are missing the Year field. Please add one in the style shown below.")

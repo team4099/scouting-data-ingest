@@ -132,7 +132,14 @@ class DataInput:
         :type event: str
         """
         self.log.info("Getting sheet data")
-        data = pd.DataFrame(self.sheet.get_all_records())
+        self.config.check_internet_connection()
+        if self.config.connected_to_internet:
+            data = pd.DataFrame(self.sheet.get_all_records())
+            # Write data to Excel file
+        else:
+            # Get data from sheet
+            ...
+
         self.log.info("Data successfully retrieved")
         self.log.info("Getting Datatypes")
         # Get rid of empty cells/ and spaces with dropna and then use SQLAlchemy null() for it to show as null in mySQL
