@@ -12,8 +12,17 @@ with open("./config/config.json") as f:
     config = json.load(f)
 gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')
 sim_file = gc.open(f'{config["Simulator Spreadsheet"]}')
-data_sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
-orig_data = pd.DataFrame(data_sheet.get_all_records())
+
+if "Data Worksheet" not in [i.title for i in sim_file.worksheets()]:
+    # They've not run the "new" (as of 5/7/21) version so add it
+    main_sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
+    main_data = pd.DataFrame(main_sheet.get_all_records())
+    new_sheet = sim_file.add_worksheet("Data Worksheet", rows=main_sheet.row_count, cols=main_sheet.col_count)
+    new_sheet.update('A1', [main_data.columns.values.tolist()] + main_data.values.tolist())
+    new_sheet.freeze(rows=1)
+
+orig_sheet = sim_file.worksheet("Data Worksheet")
+orig_data = pd.DataFrame(orig_sheet.get_all_records())
 sim_sheet = gc.open(f'{config["Simulator Spreadsheet"]}').get_worksheet(0)
 
 with open("./data/2020vahay.json") as f:
@@ -39,12 +48,13 @@ def matchHandler():
 
 
 def updateSheet(match):
-    global orig_data
-    match_dataframe = orig_data[orig_data['Match Key'].apply(lambda x: int(x.lstrip('qm'))) <= match]
+    orig_sheet = sim_file.worksheet("Data Worksheet")
+    updated_data = pd.DataFrame(orig_sheet.get_all_records())
+    match_dataframe = updated_data[updated_data['Match Key'].apply(lambda x: int(x.lstrip('qm'))) <= match]
     global sim_sheet
     sim_sheet.resize(rows=1)
     sim_sheet.resize(rows=1000)
-    sim_sheet.update('A2', match_dataframe.values.tolist())
+    sim_sheet.update('A1', [match_dataframe.columns.values.tolist()] + match_dataframe.values.tolist())
     return None
 
 
