@@ -35,7 +35,7 @@ class DataManager:
         # Connecting to MySQL
         self.log.info("Connecting to MySQL")
         self.engine = create_engine(
-            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@localhost/scouting'
+            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@{"localhost" if self.config.db_url is None else self.config.db_url}/scouting'
         )
         self.session_template = sessionmaker()
         self.session_template.configure(bind=self.engine)

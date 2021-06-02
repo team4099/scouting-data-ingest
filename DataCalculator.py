@@ -2,7 +2,7 @@ import numpy
 import pandas as pd
 from scipy.sparse.linalg import lsmr
 from sklearn.preprocessing import MultiLabelBinarizer
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, null
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, null
 
 from SQLObjects import Base
 from terminal import logger
@@ -131,7 +131,10 @@ class DataCalculator:
             elif dtype == numpy.int64:
                 calc_data_config[col] = "Column(Integer)"
             elif dtype == numpy.object:
-                calc_data_config[col] = "Column(String(100))"
+                if col == "Comments":
+                    calc_data_config[col] = "Column(Text(100))"
+                else:
+                    calc_data_config[col] = "Column(String(100))"
             elif dtype == numpy.bool:
                 calc_data_config[col] = "Column(Boolean())"
             else:
@@ -195,6 +198,20 @@ class DataCalculator:
         teams_with_oprs.set_index("teams", inplace=True)
         return teams_with_oprs
 
+    def group_notes(self):
+        team_data = self.data_accessor.get_team_data()[['teamid','Match_Key','Notes','Issues']]
+        stripped_match_id = team_data['Match_Key'].apply(lambda x: x[x.index("_")+1:])
+        team_data["Comments"] = "N" + stripped_match_id + ": " + team_data['Notes'] + ", I" + stripped_match_id + ": " + team_data["Issues"] + ", "
+
+        notes_by_teams = pd.DataFrame(index=team_data['teamid'].unique(), columns=["Comments"])
+
+        for team in team_data['teamid'].unique():
+            team_specific_notes = team_data.loc[team_data['teamid'] == team]
+            notes_by_teams.at[team, "Comments"] = team_specific_notes["Comments"].str.join("")
+
+        return notes_by_teams
+
+
     def calculate_team_data(self):
         """
             Calculates Team Data
@@ -228,6 +245,7 @@ class DataCalculator:
         shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
 
         oprs = self.calculate_opr("totalPoints")
+        comments = self.group_notes()
 
         self.log.info("Adding data to SQL")
         self.team_data_to_sql(
@@ -249,7 +267,8 @@ class DataCalculator:
                 shooting_zone_pct,
                 climb_type_pct,
                 shoot_pct,
-                oprs
+                oprs,
+                comments
             ]
         )
         # Consistency scores

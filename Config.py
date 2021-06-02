@@ -45,6 +45,7 @@ class Config:
         self.simulator_url = config.get("Simulator URL")
         self.db_user = config.get("Database User")
         self.db_pwd = config.get("Database Password")
+        self.db_url = config.get("Database URL")
         self.event = config.get("Event")
 
         if validate:
@@ -139,7 +140,7 @@ class Config:
         try:
             # TODO: Fix URL for non self-hosted scenarios
             create_engine(
-                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@localhost/scouting'
+                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@{"localhost" if self.db_url is None else self.db_url}/scouting'
             )
         except pymysql.err.OperationalError:
             self.log.error(
