@@ -1,4 +1,5 @@
 import time
+import os
 
 from loguru import logger
 from sqlalchemy import create_engine, text
@@ -35,7 +36,7 @@ class DataManager:
         # Connecting to MySQL
         self.log.info("Connecting to MySQL")
         self.engine = create_engine(
-            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@{"localhost" if self.config.db_url is None else self.config.db_url}/scouting'
+            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@db/scouting'
         )
         self.session_template = sessionmaker()
         self.session_template.configure(bind=self.engine)
@@ -44,14 +45,10 @@ class DataManager:
 
         self.log.info("Erasing existing data")
         tables = [
-            'red_association',
-            'blue_association',
-            "match_data",
-            f"matchdata{self.config.year}",
+            f"MatchData{self.config.year}",
             "`match`",
-            "team_data",
-            f"teamdata{self.config.year}",
-            f"calculatedteamdata{self.config.year}",
+            f"TeamData{self.config.year}",
+            f"CalculatedTeamData{self.config.year}",
             "team",
         ]
         for t in tables:

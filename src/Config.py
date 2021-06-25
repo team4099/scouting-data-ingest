@@ -37,16 +37,15 @@ class Config:
 
         self.config_dict = config
 
-        self.tba_key = config.get("TBA-Key")
-        self.year = config.get("Year")
-        self.google_credentials = config.get("Google-Credentials")
-        self.spreadsheet = config.get("Spreadsheet")
-        self.simulator_spreadsheet = config.get("Simulator Spreadsheet")
-        self.simulator_url = config.get("Simulator URL")
-        self.db_user = config.get("Database User")
-        self.db_pwd = config.get("Database Password")
-        self.db_url = config.get("Database URL")
-        self.event = config.get("Event")
+        self.tba_key = os.getenv("TBA_KEY")
+        self.year = os.getenv("YEAR")
+        self.google_credentials = os.getenv("G_CRED")
+        self.spreadsheet = os.getenv("G_SHEET")
+        self.simulator_spreadsheet = os.getenv("SIM_SHEET")
+        self.simulator_url = os.getenv("SIM_URL")
+        self.db_user = os.getenv("MYSQL_USER")
+        self.db_pwd = os.getenv("MYSQL_PASSWORD")
+        self.event = os.getenv("EVENT")
 
         if validate:
             return self.validate()
@@ -140,7 +139,7 @@ class Config:
         try:
             # TODO: Fix URL for non self-hosted scenarios
             create_engine(
-                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@{"localhost" if self.db_url is None else self.db_url}/scouting'
+                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@db/scouting'
             )
         except pymysql.err.OperationalError:
             self.log.error(
