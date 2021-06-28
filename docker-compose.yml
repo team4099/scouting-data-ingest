@@ -33,7 +33,7 @@ services:
             G_SHEET: Scouting Data Collection (Responses)
             # Replace [Name] in the following line with your name
             SIM_SHEET: Scouting Data Collection (Responses) - [Name]
-            EVENT: vahay 
+            EVENT: vahay
         depends_on:
             - db
 volumes:
