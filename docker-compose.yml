@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+    db:
+        image: mysql:8
+        volumes:
+            - sdi-mysql-data:/var/lib/mysql
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_ROOT_PASSWORD: secret
+            MYSQL_DATABASE: scouting
+        ports:
+            - 4099:3306
+            
+    scouting-data-ingest:
+        build: .
+        stdin_open: true
+        ports:
+            - 5000:5000
+        working_dir: /code
+        volumes:
+            - ./src/:/code
+        environment:
+            MYSQL_HOST: mysql
+            MYSQL_USER: root
+            MYSQL_PASSWORD: secret
+            # Replace [Key] in the following line with your TBA Key
+            TBA_KEY: [Key]
+            SIM_URL: http://127.0.0.1:5000
+            YEAR: 2020
+            # Replace [File Name] in the following line with your Google Credentials File Name
+            G_CRED: [File Name]
+            G_SHEET: Scouting Data Collection (Responses)
+            # Replace [Name] in the following line with your name
+            SIM_SHEET: Scouting Data Collection (Responses) - [Name]
+            EVENT: vahay
+        depends_on:
+            - db
+volumes:
+    sdi-mysql-data:
