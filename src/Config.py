@@ -137,7 +137,6 @@ class Config:
             return False
 
         try:
-            # TODO: Fix URL for non self-hosted scenarios
             create_engine(
                 f'mysql+pymysql://{self.db_user}:{self.db_pwd}@db/scouting'
             )
