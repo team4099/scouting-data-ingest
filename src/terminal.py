@@ -35,5 +35,6 @@ class Formatter:
 logger.remove(0)
 f = Formatter()
 logger.add(sys.stdout, colorize=True, format=f.format)
+logger.add("./logs/file_{time}.log", colorize=True, format=f.format)
 # Create a new level for data errors
 logger.level("DATA", no=39, color="<red><d>")

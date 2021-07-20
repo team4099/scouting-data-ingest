@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='water.css') }}">
+</head>
+
+<body onload="reload('points')">
+    <div id="UpperSection">
+        <button id="sortByPoints" onclick="reload('points')">Sort By Points</button>
+        <button id="sortByStreak" onclick="reload('streak')">Sort By Streak</button>
+
+    </div>
+<div id="LowerSection">
+    <div id="ManageDiv">
+        <div>
+            <label for="scout-add">Add:</label>
+            <input type="text" name="scout-add" id="AddInput">
+        </div>
+        <div>
+            <label for="scout-remove">Remove:</label>
+            <select name="scout-remove" id="RemoveDropdown">
+            </select>
+        </div>
+        <button id="submitChange" onclick="submitChanges()">Submit</button>
+    </div>
+    <div id="ScoutsDiv">
+
+    </div>
+    </div>
+
+</body>
+
+
+<style>
+    #LowerSection {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #UpperSection {
+        min-height: 30vh;
+    }
+
+    #ManageDiv {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+    
+    @media screen and (min-width: 768px) {
+        #UpperSection {
+            min-height: 20vh;
+        }
+
+        #refreshButton {
+            width: min-content;
+            left: 50%;
+        }
+    }
+</style>
+<script>
+function reload(col){
+    if (col!=undefined){
+        var oReq = new XMLHttpRequest();
+        oReq.onload = addTable;
+        baseURL = window.location.origin + "/scouts/data"
+        baseURL += "?sortBy=" + col
+    oReq.open("get", baseURL);
+    oReq.send();
+    }
+
+    var scoutsReq = new XMLHttpRequest();
+    scoutsReq.onload = addOptions;
+    scoutsReq.open("get", window.location.origin + "/scouts/scouts")
+    scoutsReq.send()
+
+}
+
+function addTable(){
+    document.getElementById("ScoutsDiv").innerHTML = this.responseText;
+}
+
+function addOptions(){
+
+    const info = JSON.parse(this.responseText);
+    var dropdown = document.getElementById("RemoveDropdown");
+    var placeholder = document.createElement("option");
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    placeholder.value = "";
+    placeholder.innerText = "--";
+    dropdown.replaceChildren();
+    dropdown.append(placeholder);
+
+    info["names"].forEach((name) => {
+        var option = document.createElement("option");
+        option.value = name;
+        option.innerText = name;
+        dropdown.append(option)
+    })
+}
+
+function submitChanges(){
+    var post = new XMLHttpRequest();
+    post.open("POST", window.location.origin + "/scouts/change", false);
+
+    post.setRequestHeader("Content-Type", "application/json");
+
+    var data = JSON.stringify({ "add": document.getElementById("AddInput").value, "remove": document.getElementById("RemoveDropdown").value });
+
+    document.getElementById("AddInput").value = "";
+    post.send(data);
+    reload('points');
+}
+</script>
+
+</html>

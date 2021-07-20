@@ -5,7 +5,7 @@ import numpy
 import pandas as pd
 import requests
 from loguru import logger
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, Boolean, Float, null
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Boolean, Float, null, DateTime
 from sqlalchemy.orm import relationship
 
 from SQLObjects import Base, Matches, Teams
@@ -93,12 +93,16 @@ class DataInput:
         # Flatten the data and sort it so matches are entered in a sane way
         data = pd.json_normalize(r.json())
         data.convert_dtypes()
-        data = data[data["actual_time"] > self.last_tba_time]
-        self.last_tba_time = data["actual_time"].iloc[-1]
+        occurred_data = data[data["actual_time"] > self.last_tba_time]
+        self.last_tba_time = occurred_data["actual_time"].iloc[-1]
+        self.last_tba_match = occurred_data["key"].iloc[-1]
         data = data.sort_values(by="actual_time")
+
+        data = data.replace(numpy.nan, null(), regex=True)
 
         self.log.info("Getting Datatypes")
         # Drop all the columns we don't need in a manner being careful to check if they exist
+        alliances = data[["key","alliances.red.team_keys", "alliances.blue.team_keys"]].set_index("key")
         drop_list = [
             "videos",
             "score_breakdown",
@@ -117,8 +121,15 @@ class DataInput:
         self.log.info("Adding Matches")
         # Add matches and strip the match key
         for row in data.iterrows():
-            x = row[1]
-            self.dataAccessor.add_match_data(x["key"], self.MatchDataObject(**x.to_dict()))
+            x = row[1].to_dict()
+            alliances.loc[x["key"]]
+            x['post_result_time'] = datetime.fromtimestamp(x['post_result_time'])
+            x['predicted_time'] = datetime.fromtimestamp(x['predicted_time'])
+            x['time'] = datetime.fromtimestamp(x['time'])
+            x['actual_time'] = datetime.fromtimestamp(x['actual_time'])
+
+            self.dataAccessor.add_match_data(x["key"], self.MatchDataObject(**x))
+            self.dataAccessor.add_alliances_for_match(x["key"], alliances.loc[x["key"],"alliances.red.team_keys"], alliances.loc[x["key"], "alliances.blue.team_keys"])
         self.session.commit()
         self.log.info("Finished getting TBA Data.")
         return r.status_code
@@ -214,6 +225,11 @@ class DataInput:
                 data = data.drop(d, axis=1)
             except KeyError:
                 pass
+        
+        data['time'] = data['time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        data['post_result_time'] = data['post_result_time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        data['predicted_time'] = data['predicted_time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        data['actual_time'] = data['actual_time'].map(lambda x: pd.Timestamp(x, unit='s'))
         data = data.convert_dtypes()
         self.log.info("Constructing Configuration")
         matchDataConfig = {}
@@ -224,6 +240,8 @@ class DataInput:
                 matchDataConfig[col] = "Column(Text(500))"
             elif pd.BooleanDtype.is_dtype(dtype):
                 matchDataConfig[col] = "Column(Boolean())"
+            elif 'datetime64[ns]' == dtype:
+                matchDataConfig[col] = "Column(DateTime())"
             else:
                 self.log.warning(
                     f"In {col}, {dtype} is not a configured datatype. It will not be used."

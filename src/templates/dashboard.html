@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='water.css') }}">
+</head>
+
+<body onload="loadData()">
+    <div id="UpperSection">
+        <button id="refreshButton" onclick="update()">Refresh</button>
+
+    </div>
+    <div id="LowerSection">
+        <div id="StatusesDiv">
+            <div class="InfoDiv" id="StatusDiv">
+                <p>
+                    Status:  
+                </p>
+                &nbsp;
+                <p id="Status">
+
+                </p>
+            </div>
+            <div class="InfoDiv" id="TaskDiv">
+                <p>
+                    Current Task:  
+                </p>
+                &nbsp;
+                <p id="Task">
+
+                </p>
+            </div>
+            <div class="InfoDiv" id="LastMatchDiv">
+                <p>
+                    Last Match Processed:  
+                </p>
+                &nbsp;
+                <p id="lastMatch">
+
+                </p>
+            </div>
+        </div>
+        <div id="WarnDiv">
+            <div id="WarnContainer">
+
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+<script>
+    var warningsToIgnore = [];
+    var warningsToWatch = [];
+
+    function loadData(){
+        refreshStatus();
+        refreshWarnings();
+    }
+
+    function handleWarningClick(warning) {
+        if (warning.target.checked) {
+            var warnState = warningsToWatch.indexOf(warning.target.id)
+            if (warnState > -1) {
+                warningsToWatch.splice(warnState, 1);
+            } else {
+                warningsToIgnore.push(warning.target.id);
+            }
+        } else {
+            var warnState = warningsToIgnore.indexOf(warning.target.id)
+            if (warnState > -1) {
+                warningsToIgnore.splice(warnState, 1);
+            } else {
+                warningsToWatch.push(warning.target.id);
+            }
+        }
+    }
+
+    function update() {
+        var post = new XMLHttpRequest();
+        post.open("POST", window.location.href + "warnings");
+
+        post.setRequestHeader("Content-Type", "application/json");
+
+        var data = JSON.stringify({ "ignore": warningsToIgnore, "watch": warningsToWatch });
+
+        post.send(data);
+        warningsToIgnore = [];
+        warningsToWatch = [];
+
+        setTimeout(refreshWarnings, 100);
+        setTimeout(refreshStatus, 10)
+    }
+
+    function refreshStatus(){
+        var oReq = new XMLHttpRequest();
+        var newItems = [];
+        oReq.onload = statusHandler;
+        oReq.open("get", window.location.href + "status", true);
+        oReq.send();
+
+        function statusHandler(){
+            const status = JSON.parse(this.responseText);
+            document.getElementById("Status").innerText = status["Status"];
+            document.getElementById("Task").innerText = status["Task"];
+            document.getElementById("lastMatch").innerText = status["Last Match"]
+        }
+    }
+
+    function refreshWarnings() {
+        var oReq = new XMLHttpRequest();
+        var newItems = [];
+        oReq.onload = reqListener;
+        oReq.open("get", window.location.href + "warnings", true);
+        oReq.send();
+
+        function reqListener() {
+            const warnings = JSON.parse(this.responseText);
+
+            for (const [key, value] of Object.entries(warnings)) {
+                var numOfWarnings = 0;
+                var categoryDropdown = document.createElement("details");
+                var categoryType = document.createElement("summary");
+                var categoryContent = document.createElement("div");
+                categoryContent.style.display = "flex";
+                categoryContent.style.flexDirection = "column";
+                var categoryIgnoredContent = document.createElement("details");
+                categoryIgnoredContent.append(document.createElement("summary"));
+                categoryIgnoredContent.style.display = "flex";
+                categoryIgnoredContent.style.flexDirection = "column"
+
+
+                value.forEach((warn) => {
+                    var warningDiv = document.createElement("div");
+                    var warningContent = document.createElement("p");
+                    var warningButton = document.createElement("input")
+                    warningButton.type = "checkbox";
+                    warningButton.id = warn.id
+                    warningDiv.style.width = "100%";
+                    warningDiv.style.display = "flex"
+                    warningDiv.style.flexDirection = "row";
+                    warningDiv.style.justifyContent = "space-between";
+                    warningButton.style.height = "inherit";
+                    warningButton.onclick = handleWarningClick;
+
+                    warningContent.innerHTML = `${warn.match.substring(warn.match.indexOf('_') + 1).toUpperCase()} - <mark style="color:${(warn.alliance == "Blue") ? "Blue" : "Red"}">${warn.alliance}</mark>: ${warn.content}`;
+
+                    warningDiv.append(warningContent);
+                    if (warn.ignore == "1") {
+                        warningButton.checked = true;
+                        warningDiv.append(warningButton);
+                        categoryIgnoredContent.append(warningDiv);
+                    } else {
+                        warningDiv.append(warningButton);
+                        categoryContent.append(warningDiv);
+                        numOfWarnings += 1
+                    }
+
+
+                })
+                categoryType.innerText = key + " (" + numOfWarnings + ")";
+                categoryDropdown.append(categoryType);
+                categoryDropdown.append(categoryContent);
+                categoryDropdown.append(categoryIgnoredContent);
+                newItems.push(categoryDropdown)
+            }
+            document.getElementById("WarnContainer").replaceChildren();
+            newItems.forEach((elem) => {
+                document.getElementById("WarnContainer").append(elem);
+            })
+        }
+    }
+</script>
+
+<style>
+    #LowerSection {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #UpperSection {
+        min-height: 30vh;
+    }
+
+    #WarnDiv {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    #WarnContainer {
+        height: 60vh;
+        overflow-y: auto;
+    }
+
+    #StatusesDiv {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .InfoDiv {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+    }
+
+    #Status, #Task, #lastMatch {
+        font-weight: bold;
+    }
+
+    mark {
+        background-color: transparent;
+    }
+
+    @media screen and (min-width: 768px) {
+        #UpperSection {
+            min-height: 20vh;
+        }
+
+        #LowerSection {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #StatusesDiv {
+            min-width: 30%;
+            order: 2;
+            margin-left: 5%;
+        }
+
+        #WarnDiv{
+            order: 1;
+        }
+
+        #refreshButton {
+            width: min-content;
+            left: 50%;
+        }
+    }
+</style>
+
+</html>

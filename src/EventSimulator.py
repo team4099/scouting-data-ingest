@@ -26,15 +26,29 @@ orig_data = pd.DataFrame(orig_sheet.get_all_records())
 sim_sheet = gc.open(f'{config["Simulator Spreadsheet"]}').get_worksheet(0)
 
 with open("./data/2020vahay.json") as f:
-    all_matches = json.loads(f.read())
+    data = f.read()
+    all_matches = json.loads(data)
     max_matches = len(all_matches)
+    not_played_matches = json.loads(data)
+    for match in not_played_matches:
+        match["alliances"]["red"]["score"] = 0
+        match["alliances"]["blue"]["score"] = 0
+        match["winning_alliance"] = None
+        match["time"] = 0
+        match["post_result_time"] = 0
+        match["actual_time"] = 0
+        match["score_breakdown"] = {}
+
 
 lastModified = datetime.now(tz=timezone('GMT'))
 
 
 @app.route('/matches')
 def matchHandler():
-    curr_matches = json.dumps(all_matches[:currMatch])
+    curr_matches = all_matches[:currMatch]
+    next_matches = not_played_matches[currMatch:]
+    curr_matches.extend(next_matches)
+
     if request.headers.get('If-Modified-Since') is None:
         return make_response("")
     if datetime.strptime(request.headers.get('If-Modified-Since'), "%a, %d %b %Y %H:%M:%S %Z").replace(
@@ -42,7 +56,7 @@ def matchHandler():
         x = make_response()
         x.status_code = 304
         return x
-    x = make_response(curr_matches)
+    x = make_response(json.dumps(curr_matches))
     x.headers['Last-Modified'] = lastModified.strftime('%a, %d %b %Y %H:%M:%S %Z')
     return x
 
@@ -62,17 +76,17 @@ def updateSheet(match):
 def form():
     global currMatch
     if int(request.args['match_num']) < currMatch:
-        return render_template('main.html', count=currMatch, max_matches=max_matches, warning="Next match must be higher. Restart if you want to see what happens at a lower match number.")
+        return render_template('eventsim.html', count=currMatch, max_matches=max_matches, warning="Next match must be higher. Restart if you want to see what happens at a lower match number.")
     currMatch = int(request.args['match_num'])
     updateSheet(currMatch)
     global lastModified
     lastModified = datetime.now(tz=timezone('GMT'))
-    return render_template('main.html', count=currMatch, max_matches=max_matches)
+    return render_template('eventsim.html', count=currMatch, max_matches=max_matches)
 
 
 @app.route('/')
 def index():
-    return render_template('main.html', count=currMatch, max_matches=max_matches)
+    return render_template('eventsim.html', count=currMatch, max_matches=max_matches)
 
 
 if __name__ == "__main__":

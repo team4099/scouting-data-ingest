@@ -1,4 +1,5 @@
 from re import search
+import re
 
 import pandas
 import pandas as pd
@@ -32,10 +33,11 @@ class DataProcessor:
         self.error_condition = err_cond
         self.team_data = None
         self.match_data = None
+        self.clean_tags = re.compile("<.*?>")
 
         self.log.info("DataProcessor Loaded!")
 
-    def check_equals_by_alliance(self, team_metrics, match_metrics, team_weights=None, match_weights=None):
+    def check_equals_by_alliance(self, category, team_metrics, match_metrics, team_weights=None, match_weights=None):
         """ Checks if the sum of a metric across an Alliance is equal to a metric for that Alliance in TBA.
 
         Given a weights list, this function will apply it to the metrics.
@@ -48,10 +50,7 @@ class DataProcessor:
         :type team_weights: None
         :param match_weights: A list of weights for the metric columns.
         :type match_weights: None
-        :return: A list of warnings
-        :rtype: List[str]
         """
-        warnings = []
         team_columns = self.team_data.loc[:, ["teamid", "Match_Key"] + team_metrics]
         match_columns = {key: self.match_data.loc[:, ["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
         match_metrics = match_metrics.values()
@@ -99,13 +98,11 @@ class DataProcessor:
                     self.errors.append(row["Sum"] - curr_alliance_data["Sum"].sum())
                     warning_desc = f'<b>{row["matchId"]}{" " if len(row["matchId"]) < 14 else ""}</b> - {"<blue>" if color == "Blue" else "<r>"}{color}</> - '
                     col_names = ", ".join([col for col in team_columns.columns if col not in ["Match_Key", "teamid", "Sum"]])
-                    warning = f'sum of the {col_names} columns <d><green>({curr_alliance_data["Sum"].sum()})</></> do not equal the sum of the TBA columns <d><green>({row["Sum"]})</></>'
+                    warning = f'Sum of the {col_names} columns <d><green>({curr_alliance_data["Sum"].sum()})</></> do not equal the sum of the TBA columns <d><green>({row["Sum"]})</></>'
                     self.log.log("DATA", warning_desc + warning)
-                    warnings.append(warning_desc + warning)
+                    self.data_accessor.add_warning(category,row["matchId"],color,re.sub(self.clean_tags, '', warning))
 
-        return warnings
-
-    def check_same(self, team_column, match_metrics):
+    def check_same(self, category, team_column, match_metrics):
         """
 
         Check if a metric is the same for each robot in team_data and match_data using driver stations.
@@ -114,10 +111,7 @@ class DataProcessor:
         :type team_column: pandas.DataFrame
         :param match_metrics: A dictionary of lists for each color containing the metric(s) to be analyzed.
         :type match_metrics: Dict[str, List[str]]
-        :return: A list of warnings
-        :rtype: List[str]
         """
-        warnings = []
         match_column = {key: self.match_data.loc[:, ["matchId", *alliance_metrics]] for key, alliance_metrics in match_metrics.items()}
 
         # Check if there are any matches in TeamData that aren't in MatchData and warn us
@@ -142,7 +136,7 @@ class DataProcessor:
                         ['Driver_Station', 'teamid']].set_index('Driver_Station')
                 else:
                     self.log.error(f"Color {color} is not valid")
-                    return warnings
+                    return
                 curr_match_data = pd.merge(
                     curr_order, curr_match_data, on="teamid", how="inner"
                 )
@@ -159,11 +153,9 @@ class DataProcessor:
                         warning_desc = f'<b>{row["matchId"]}{" " if len(row["matchId"]) < 14 else ""}</b> - {"<blue>" if color == "Blue" else "<r>"}{color}</> - '
                         warning = f'{curr_order.loc[curr_order.index[i], "teamid"]}\'s endgame status is recorded as <d><blue>{r["self"]}</></> while TBA has it as <d><blue>{r["other"]}</></>'
                         self.log.log("DATA", warning_desc + warning)
-                        warnings.append(warning_desc + warning)
+                        self.data_accessor.add_warning(category,row["matchId"],color,re.sub(self.clean_tags, '', warning))
 
-        return warnings
-
-    def check_key(self, team_data_column_name):
+    def check_key(self, team_data_column_name, category):
         """
 
         Checks if any keys do not follow the appropriate format or have been entered incorrectly.
@@ -171,18 +163,16 @@ class DataProcessor:
         :param team_data_column_name: The column name in which the keys are stored.
         :type team_data_column_name: str
         :return: A list of warnings
-        :rtype: List[str]
         """
         team_data_column = self.team_data[team_data_column_name]
-        warnings = []
         for index, key in team_data_column.iteritems():
             if not search(r"2020[a-z]{4,5}_(qm|sf|qf|f)\d{1,2}(m\d{1})*", key):
                 warning = (
                     f"Match Key in TeamData2020 at index {index} is not a proper key"
                 )
                 self.log.warning(warning)
-                warnings.append(warning)
-        return warnings
+                self.data_accessor.add_warning(category,content=re.sub(self.clean_tags, '', warning))
+    
 
     def check_data(self):
         """
@@ -192,7 +182,6 @@ class DataProcessor:
         :return: A dictionary of warnings
         :rtype: Dict[str, List]
         """
-        warnings = {}
         self.log.info("Validating Data")
         self.log.info("Loading Data")
 
@@ -200,10 +189,10 @@ class DataProcessor:
         self.match_data = self.data_accessor.get_match_data()
 
         self.log.info("Checking TeamData match keys")
-        warnings["Match Key Violations"] = self.check_key("Match_Key")
+        self.check_key("Match_Key", "Match Key Violations")
 
         self.log.info("Checking for Auto Power Cell Low Goal Violations")
-        warnings["Auto Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
+        self.check_equals_by_alliance("Auto Power Cell Low Goal Violations",
             ["Auto_Low_Goal"],
             {
                 "Blue": ["score_breakdown.blue.autoCellsBottom"],
@@ -212,7 +201,7 @@ class DataProcessor:
         )
 
         self.log.info("Checking for Auto Power Cell High Goal Violations")
-        warnings["Auto Power Cell High Goal Violations"] = self.check_equals_by_alliance(
+        self.check_equals_by_alliance("Auto Power Cell High Goal Violations",
             ["Auto_High_Goal"],
             {
                 "Blue": ["score_breakdown.blue.autoCellsInner", "score_breakdown.blue.autoCellsOuter"],
@@ -221,7 +210,7 @@ class DataProcessor:
         )
 
         self.log.info("Checking for Teleop Power Cell Low Goal Violations")
-        warnings["Teleop Power Cell Low Goal Violations"] = self.check_equals_by_alliance(
+        self.check_equals_by_alliance("Teleop Power Cell Low Goal Violations",
             ["Teleop_Low_Goal"],
             {
                 "Blue": ["score_breakdown.blue.teleopCellsBottom"],
@@ -232,7 +221,7 @@ class DataProcessor:
         self.log.info(
             "Checking for Teleop Power Cell High Goal Violations"
         )
-        warnings["Teleop Power Cell High Goal Violations"] = self.check_equals_by_alliance(
+        self.check_equals_by_alliance("Teleop Power Cell High Goal Violations",
             ["Teleop_High_Goal"],
             {
                 "Blue": ["score_breakdown.blue.teleopCellsInner", "score_breakdown.blue.teleopCellsOuter"],
@@ -241,7 +230,7 @@ class DataProcessor:
         )
 
         self.log.info("Checking for Endgame Status Violations")
-        warnings["Endgame Status Violations"] = self.check_same(
+        self.check_same("Endgame Status Violations",
             self.team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
             .replace(pd.NA, "Unknown")
             .replace("No Climb", "None"),
@@ -258,7 +247,3 @@ class DataProcessor:
                 ],
             },
         )
-
-        self.log.info(f"<b>{sum([len(t) for t in warnings.values()])}</b> errors were found in the data.")
-        self.log.info(f"The sum errors have an average of <b>{round(sum(self.errors) / len(self.errors), 2)}</b>")
-        return warnings

@@ -1,3 +1,4 @@
+import json
 import numpy
 import pandas as pd
 from scipy.sparse.linalg import lsmr
@@ -147,6 +148,9 @@ class DataCalculator:
         }
 
         calc_data_config['teamid'] = "Column(String(20), primary_key=True)"
+
+        with open("CalculatedTeamData2020.json","w") as f:
+            json.dump(calc_data_config,f)
 
         calc_data_config = {
             k: eval(v) for k, v in calc_data_config.items()

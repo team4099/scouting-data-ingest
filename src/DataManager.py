@@ -4,6 +4,7 @@ import os
 from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from requests import post, get
 
 from Config import Config
 from DataAccessor import DataAccessor
@@ -50,6 +51,10 @@ class DataManager:
             f"TeamData{self.config.year}",
             f"CalculatedTeamData{self.config.year}",
             "team",
+            "warnings",
+            "info",
+            "predictions",
+            "alliances"
         ]
         for t in tables:
             tex = text(f"drop table if exists {t}")
@@ -63,6 +68,9 @@ class DataManager:
         self.data_calculator = DataCalculator(self.engine, self.session, self.connection, self.data_accessor, self.config)
 
         self.interval = interval
+        self.data_accessor.add_info("Status", "Paused")
+        self.data_accessor.add_info("Task", "Waiting")
+        self.data_accessor.add_info("Last Match", "N/A")
 
         self.log.info("Loaded Scouting-Data-Ingest!")
 
@@ -71,6 +79,7 @@ class DataManager:
         Gets Data from TBA and Google Sheets
 
         """
+        self.data_accessor.update_info("Task", "Getting Data")
         self.log.info(f"Getting data for {self.config.year + self.config.event}")
         self.data_input.get_tba_data(self.config.year + self.config.event)
         self.data_input.get_sheet_data(self.config.year + self.config.event)
@@ -81,35 +90,38 @@ class DataManager:
 
         Checks the data for errors.
 
-        :return: A dict of warnings
-        :rtype: Dict[str, List]
         """
-        return self.data_processor.check_data()
+        self.data_accessor.update_info("Task", "Checking Data")
+        self.data_processor.check_data()
 
     def calculate_data(self):
         """
         Calculates TeamData
         """
+        self.data_accessor.update_info("Task", "Performing Calculations on data")
         self.data_calculator.calculate_team_data()
 
     def refresh(self):
         """
         Gets Data and then checks it and calculates new data.
 
-        :return: A dictionary of warnings
-        :rtype: Dict[str, List]
         """
+        self.data_accessor.update_info("Status", "Running")
         self.get_data()
-        warnings = self.check_data()
+        self.check_data()
         self.calculate_data()
+        self.data_accessor.update_info("Task", "Waiting")
+        self.data_accessor.update_info("Status", "Finished")
+        self.data_accessor.update_info("Last Match", self.data_input.last_tba_match)
         self.log.info("Run finished.")
-        return warnings
 
     def start(self):
         """
         Starts the ingest
         """
+        self.data_accessor.update_info("Status", "Running")
         start_time = time.time()
         while True:
             self.refresh()
+            self.data_accessor.update_info("Task", "Waiting")
             time.sleep(self.interval - ((time.time() - start_time) % self.interval))

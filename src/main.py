@@ -16,7 +16,6 @@ simulation = False
 if "--simulation" in sys.argv[1:]:
     simulation = True
 
-
 dm = DataManager(skip_validation=skip_validation, interval=refresh_time, simulation=simulation)
 if simulation:
     dm.start()
