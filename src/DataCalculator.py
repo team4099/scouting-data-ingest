@@ -245,7 +245,7 @@ class DataCalculator:
         shooting_zone_pct = self.calculate_team_percentages(
             ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
             replacements={"Yes": 1, "No": 0})
-        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No Climb'])
+        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No_Climb'])
         shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
 
         oprs = self.calculate_opr("totalPoints")

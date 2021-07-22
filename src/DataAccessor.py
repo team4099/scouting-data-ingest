@@ -123,13 +123,15 @@ class DataAccessor:
         if self.check_if_match_data_exists(key):
             if not self.check_if_match_data_exists(key, data.actual_time):
                 occurred = True
-                update_stmt = update(self.MatchDataObject).where(self.MatchDataObject.matchId == key).values(**data)
+                match_vars = dict(vars(data))
+                match_vars.pop("_sa_instance_state")
+                update_stmt = update(self.MatchDataObject).where(self.MatchDataObject.matchId == key).values(**match_vars)
                 self.connection.execute(update_stmt)
                 self.session.commit()
                 self.process_predictions(key, data.winning_alliance)
                 return
             else:
-                self.log.warning("MatchData already exists. It will not be added.")
+                self.log.warning(f"MatchData for match {key} already exists. It will not be added.")
                 return
 
         m = Matches(id=key, data_list=data)
@@ -252,6 +254,23 @@ class DataAccessor:
         p = Predictions(scout=scout, match=match, prediction=prediction)
         self.session.add(p)
         self.session.commit()
+
+    def get_prediction(self, scout=None, match=None, prediction=None, type_df=True):
+        query = self.session.query(Predictions)
+
+        if scout is not None:
+            query = query.filter(Predictions.scout == scout)
+
+        if match is not None:
+            query = query.filter(Predictions.match == match)
+
+        if prediction is not None:
+            query = query.filter(Predictions.prediction == prediction)
+
+        if type_df:
+            return pd.read_sql_query(query.statement, self.sql_connection())
+        else:
+            return query[:]
 
     def check_if_prediction_exists(self, scout, match):
         with self.session.no_autoflush:

@@ -4,52 +4,349 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Match {{ match_key }}</title>
+    <title>Match {{ key }}</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='water.css') }}">
+    <script src="{{ url_for('static', filename='chart.js') }}"></script>
 </head>
 
 <body onload="reload()">
-        <div>
-            <label for="scout-name">Name:</label>
-            <select name="scout-name" id="NameSelect">
-            </select>
+    <div id="UpperSection">
+        <p id="matchKey"> <b>{{ match_key }}</b></p>
+        <p id="timeLabel"></p>
+        <button id="refreshButton" onclick="reload()">Refresh</button>
+        <p><a href="https://www.thebluealliance.com/match/{{ match_key }}">More at The Blue Alliance</a></p>
+    </div>
+    <div id="MiddleSection">
+        <div id="AllianceDiv">
+            <div id="redAlliance" class="alliance">
+            </div>
+            <div id="blueAlliance" class="alliance">
+            </div>
         </div>
-        <div>
-            <label for="match">Match:</label>
-            <select name="match" id="MatchSelect">
-            </select>
+        <div id="radarChartDiv" class="preMatch">
+            <canvas id="radarChart"></canvas>
         </div>
-        <div>
-            <label for="result">Outcome:</label>
-            <select name="result" id="Result Select">
-            </select>
+        <div class="postMatch" id="MatchInfoDiv">
+            <div class="postMatchInfo" id="winnerDiv">
+                <p class="postMatchInfoLabel">Winner:</p>
+                <p id="winner"></p>
+            </div>
+            <div class="postMatchInfo" id="totalScoreDiv">
+                <p class="postMatchInfoLabel">Total Score:</p>
+                <p class="redInfo" id="redTotalScore"></p>
+                <p class="blueInfo" id="blueTotalScore"></p>
+            </div>
+            <div class="postMatchInfo" id="autoScoreDiv">
+                <p class="postMatchInfoLabel">Auto Score:</p>
+                <p class="redInfo" id="redAutoScore"></p>
+                <p class="blueInfo" id="blueAutoScore"></p>
+            </div>
+            <div class="postMatchInfo" id="totalTeleopDiv">
+                <p class="postMatchInfoLabel">Teleop Score:</p>
+                <p class="redInfo" id="redTeleopScore"></p>
+                <p class="blueInfo" id="blueTeleopScore"></p>
+            </div>
+            <div class="postMatchInfo" id="totalEndgameDiv">
+                <p class="postMatchInfoLabel">Endgame Score:</p>
+                <p class="redInfo" id="redEndgameScore"></p>
+                <p class="blueInfo" id="blueEndgameScore"></p>
+            </div>
+            <div class="postMatchInfo" id="totalRPDiv">
+                <p class="postMatchInfoLabel">Ranking Points:</p>
+                <p class="redInfo" id="redRP"></p>
+                <p class="blueInfo" id="blueRP"></p>
+            </div>
+            <div class="postMatchInfo" id="autoHighDiv">
+                <p class="postMatchInfoLabel">Auto High Goal Points:</p>
+                <p class="redInfo" id="redAutoHighScore"></p>
+                <p class="blueInfo" id="blueAutoHighScore"></p>
+            </div>
+            <div class="postMatchInfo" id="autoLowDiv">
+                <p class="postMatchInfoLabel">Auto Low Goal Points:</p>
+                <p class="redInfo" id="redAutoLowScore"></p>
+                <p class="blueInfo" id="blueAutoLowScore"></p>
+            </div>
+            <div class="postMatchInfo" id="teleopHighDiv">
+                <p class="postMatchInfoLabel">Teleop High Goal Points:</p>
+                <p class="redInfo" id="redTeleopHighScore"></p>
+                <p class="blueInfo" id="blueTeleopHighScore"></p>
+            </div>
+            <div class="postMatchInfo" id="teleopLowDiv">
+                <p class="postMatchInfoLabel">Teleop Low Goal Points:</p>
+                <p class="redInfo" id="redTeleopLowScore"></p>
+                <p class="blueInfo" id="blueTeleopLowScore"></p>
+            </div>
         </div>
-        <button id="submitChange" onclick="submitChanges()">Submit</button>
+    </div>
+    <div id="LowerSection">
+        <div id="PredictionDiv" class="preMatch">
+            <div>
+                <label for="scout-name">Name:</label>
+                <select name="scout-name" id="NameSelect">
+                </select>
+            </div>
+            <div>
+                <label for="result">Outcome:</label>
+                <select name="result" id="ResultSelect">
+                    <option value="" disabled selected>--</option>
+                    <option value="red">Red Wins</option>
+                    <option value="blue">Blue Wins</option>
+                    <option value="tie">Tie</option>
+                </select>
+            </div>
+            <div>
+                <button id="submitChange" onclick="submitChanges()">Submit</button>
+                <p id="notifyDiv"></p>
+            </div>
+        </div>
+        <div id="OddsDiv" class="postMatch">
+            <canvas id="oddsChart"></canvas>
+        </div>
+    </div>
 </body>
 
 
 <style>
+    #LowerSection {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #UpperSection {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    #ManageDiv {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    #OddsDiv {
+        height: 2vh;
+    }
+
+    #AllianceDiv {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .alliance {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #redAlliance > a {
+        color: red
+    }
+
+    #radarChartDiv {
+        width: 80vw;
+        margin: auto;
+    }
+
+    #PredictionDiv {
+        display:flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    #MatchInfoDiv {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .postMatchInfo {
+        display:flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
     @media screen and (min-width: 768px) {
+        #UpperSection {
+            min-height: 2vh;
+        }
+
+        #refreshButton {
+            width: min-content;
+            left: 50%;
+        }
+
+        #radarChartDiv {
+            height: auto;
+            width: 30vw;
+        }
     }
 </style>
 <script>
+var oddsCtx = document.getElementById('oddsChart');
+var oddsChart = new Chart(oddsCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Votes'],
+        datasets: [{
+            label: 'Red votes',
+          data: [],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+            ],
+            borderWidth: 1
+        },{
+            label: 'Blue votes',
+          data: [],
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.2)'
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+            ],
+            borderWidth: 1
+        }
+                  ]
+    },
+    options: {
+        scales: {
+            y: {
+              beginAtZero: true,
+              stacked: true
+            },
+          x: {
+            stacked:true
+          }
+        },
+      indexAxis: 'y',
+      aspectRatio: 7 
+    }
+});
+
+
+var radarCtx = document.getElementById('radarChart');
+var radarChart = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: ['Auto High Goal', 'Auto Low Goal', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score'],
+        datasets: [{
+            label: 'Red Alliance',
+          data: [],
+          fill: true,
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          borderColor: 'rgb(255, 99, 132)',
+          pointBackgroundColor: 'rgb(255, 99, 132)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgb(255, 99, 132)'
+        },{
+          label: 'Blue Alliance',
+          data: [],
+          fill: true,
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgb(54, 162, 235)',
+          pointBackgroundColor: 'rgb(54, 162, 235)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgb(54, 162, 235)' 
+        }]
+    },
+    options: {
+        elements: {
+            line: {
+                borderWidth: 3
+            }
+        }
+    }
+});
+
 function reload(){
+    var dataReq = new XMLHttpRequest();
+    dataReq.onload = fillData;
+    dataReq.open("get", window.location.href + "/data")
+    dataReq.send()
+  
     var scoutsReq = new XMLHttpRequest();
     scoutsReq.onload = addOptions;
     scoutsReq.open("get", window.location.origin + "/scouts/scouts")
     scoutsReq.send()
-
-    var matchesReq = new XMLHttpRequest();
-    matchesReq.onload = addMatchOptions;
-    matchesReq.open("get", window.location.origin + "/matches/upcoming")
-    matchesReq.send()
-
 }
 
+function fillData(){
+  const data = JSON.parse(this.responseText);
+
+  document.getElementById("redAlliance").replaceChildren()
+  document.getElementById("blueAlliance").replaceChildren()
+  data["alliance"]["red"].forEach((elem) => {
+    team = document.createElement("a")
+    team.id = elem
+    team.href = window.location.origin + "/team/" + elem
+    team.innerText = elem
+    document.getElementById("redAlliance").append(team)
+  })
+  data["alliance"]["blue"].forEach((elem) => {
+    team = document.createElement("a")
+    team.id = elem
+    team.href = window.location.origin + "/team/" + elem
+    team.innerText = elem
+    document.getElementById("blueAlliance").append(team)
+  })
+
+
+  var pre = document.getElementsByClassName("preMatch");
+  var post = document.getElementsByClassName("postMatch");
+
+  if (data["occurred"]) {
+    for (var i = 0; i < pre.length; i++) {
+      pre.item(i).style.display = 'none';
+    }
+    for (var i = 0; i < post.length; i++) {
+      post.item(i).style.display = 'flex';
+    }
+    document.getElementById("timeLabel").innerText = "Finished at " + (new Date(data["actualTime"])).toLocaleString()
+    if (data["winner"] == "red"){
+      document.getElementById("winner").style.color = "red"
+      document.getElementById("winner").innerText = "Red"
+    }else if (data["winner"] == "blue") {
+      document.getElementById("winner").style.color = "blue"
+      document.getElementById("winner").innerText = "Blue"
+    }
+
+    ["red", "blue"].forEach((color) => {
+      document.getElementById(color+"TotalScore").innerText = data["score"][color]["totalScore"]
+      document.getElementById(color+"AutoScore").innerText = data["score"][color]["teleopScore"]
+      document.getElementById(color+"TeleopScore").innerText = data["score"][color]["autoScore"]
+      document.getElementById(color+"EndgameScore").innerText = data["score"][color]["endgameScore"]
+      document.getElementById(color+"RP").innerText = data["score"][color]["rankingPoints"]
+      document.getElementById(color+"AutoHighScore").innerText = data["score"][color]["autoHighGoal"]
+      document.getElementById(color+"AutoLowScore").innerText = data["score"][color]["autoLowGoal"]
+      document.getElementById(color+"TeleopHighScore").innerText = data["score"][color]["teleopHighGoal"]
+      document.getElementById(color+"TeleopLowScore").innerText = data["score"][color]["teleopLowGoal"]
+    })
+
+    oddsChart.data.datasets[0].data = [data["odds"]["red"]]
+    oddsChart.data.datasets[1].data = [data["odds"]["blue"]]
+    oddsChart.update()
+  }else{
+    for (var i = 0; i < pre.length; i++) {
+      pre.item(i).style.display = 'flex';
+    }
+    for (var i = 0; i < post.length; i++) {
+      post.item(i).style.display = 'none';
+    }
+    document.getElementById("timeLabel").innerText = "Expected to be at " + (new Date(data["expectedTime"])).toLocaleString()
+    radarChart.data.datasets[0].data = Object.values(data["data"]["red"])
+    radarChart.data.datasets[1].data = Object.values(data["data"]["blue"])
+    radarChart.update()
+    }
+}
+    
 function addOptions(){
 
     const info = JSON.parse(this.responseText);
-    var dropdown = document.getElementById("RemoveDropdown");
+    var dropdown = document.getElementById("NameSelect");
     var placeholder = document.createElement("option");
     placeholder.disabled = true;
     placeholder.selected = true;
@@ -68,15 +365,13 @@ function addOptions(){
 
 function submitChanges(){
     var post = new XMLHttpRequest();
-    post.open("POST", window.location.origin + "/scouts/change", false);
+    post.open("POST", window.location.href + "/prediction", false);
 
     post.setRequestHeader("Content-Type", "application/json");
 
-    var data = JSON.stringify({ "add": document.getElementById("AddInput").value, "remove": document.getElementById("RemoveDropdown").value });
+    var data = JSON.stringify({ "scout": document.getElementById("NameSelect").value, "prediction": document.getElementById("ResultSelect").value });
 
-    document.getElementById("AddInput").value = "";
     post.send(data);
-    reload('points');
 }
 </script>
 
