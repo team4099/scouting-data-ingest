@@ -231,7 +231,7 @@ class DataProcessor:
 
         self.log.info("Checking for Endgame Status Violations")
         self.check_same("Endgame Status Violations",
-            self.team_data.loc[:, ["teamid", "Match_Key", "Climb_Type"]]
+            self.team_data.loc[:, ["teamid", "Match_Key", "FinalClimb_Type"]]
             .replace(pd.NA, "Unknown")
             .replace("No Climb", "None"),
             {

@@ -200,7 +200,7 @@ var radarCtx = document.getElementById('radarChart');
 var radarChart = new Chart(radarCtx, {
     type: 'radar',
     data: {
-      labels: ['Auto High Goal', 'Auto Low Goal', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score'],
+      labels: ['Auto High Goal', 'Auto Low Goal', 'Auto Misses', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score'],
         datasets: [{
             label: 'Red Alliance',
           data: [],
@@ -329,7 +329,7 @@ function fillData(){
       post.item(i).style.display = 'none';
     }
     document.getElementById("timeLabel").innerText = "Expected to be at " + (new Date(data["expectedTime"])).toLocaleString()
-    radarChart.data.datasets[0].data = [data["data"]["red"]["autoHighGoal"]/25,data["data"]["red"]["autoLowGoal"]/25, data["data"]["red"]["teleopHighGoal"]/50, data["data"]["red"]["teleopLowGoal"]/50,data["data"]["red"]["teleopMisses"]/50, data["data"]["red"]["endgameScore"]/75, data["data"]["red"]["climbTimeScore"]/30]
+    radarChart.data.datasets[0].data = [data["data"]["red"]["autoHighGoal"]/25,data["data"]["red"]["autoLowGoal"]/25, data["data"]["red"]["autoMisses"]/25, data["data"]["red"]["teleopHighGoal"]/50, data["data"]["red"]["teleopLowGoal"]/50,data["data"]["red"]["teleopMisses"]/50, data["data"]["red"]["endgameScore"]/75, data["data"]["red"]["climbTimeScore"]/30]
     radarChart.data.datasets[1].data = [data["data"]["blue"]["autoHighGoal"]/25,data["data"]["blue"]["autoLowGoal"]/25, data["data"]["blue"]["teleopHighGoal"]/50, data["data"]["blue"]["teleopLowGoal"]/50,data["data"]["blue"]["teleopMisses"]/50, data["data"]["blue"]["endgameScore"]/75, data["data"]["blue"]["climbTimeScore"]/30]
     radarChart.update()
     }

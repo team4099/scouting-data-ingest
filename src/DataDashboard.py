@@ -112,6 +112,7 @@ def match_data(key):
         for color in ["red","blue"]:
             data[color]["autoHighGoal"] = sum([(0 if t.Auto_High_Goal_avg is None else t.Auto_High_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
             data[color]["autoLowGoal"] = sum([(0 if t.Auto_Low_Goal_avg is None else t.Auto_Low_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["autoMisses"] = sum([(0 if t.Auto_Misses_avg is None else t.Auto_Misses_avg) for t in teams if t != [] and t.teamid in alliance[color]])
             data[color]["teleopLowGoal"] = sum([(0 if t.Teleop_Low_Goal_avg is None else t.Teleop_Low_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
             data[color]["teleopHighGoal"] = sum([(0 if t.Teleop_High_Goal_avg is None else t.Teleop_High_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
             data[color]["teleopMisses"] = sum([(0 if t.Teleop_Misses_avg is None else t.Teleop_Misses_avg) for t in teams if t != [] and t.teamid in alliance[color]])
@@ -139,6 +140,7 @@ def team_data(teamid):
     payload["teleopHighGoal"] = team.Teleop_High_Goal_avg
     payload["teleopLowGoal"] = team.Teleop_Low_Goal_avg
     payload["teleopMisses"] = team.Teleop_Misses_avg
+    payload["autoMisses"] = team.Auto_Misses_avg
     payload["endgameScore"] = team.Climb_Type_Park * 5 + team.Climb_Type_Hang * 25
     payload["parkClimb"] = team.Climb_Type_Park
     payload["hangClimb"] = team.Climb_Type_Hang

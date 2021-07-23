@@ -229,7 +229,7 @@ class DataCalculator:
         tele_low_avg = self.calculate_team_average("Teleop_Low_Goal")
         tele_high_avg = self.calculate_team_average("Teleop_High_Goal")
         tele_miss_avg = self.calculate_team_average("Teleop_Misses")
-        fouls_avg = self.calculate_team_average("Fouls")
+        auto_miss_avg = self.calculate_team_average("Auto_Misses")
         climb_time_avg = self.calculate_team_average("Climb_Time")
 
         self.log.info("Calculating medians")
@@ -238,14 +238,14 @@ class DataCalculator:
         tele_low_med = self.calculate_team_median("Teleop_Low_Goal")
         tele_high_med = self.calculate_team_median("Teleop_High_Goal")
         tele_miss_med = self.calculate_team_median("Teleop_Misses")
-        fouls_med = self.calculate_team_median("Fouls")
+        auto_miss_med = self.calculate_team_median("Auto_Misses")
         climb_time_med = self.calculate_team_median("Climb_Time")
 
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
             ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
             replacements={"Yes": 1, "No": 0})
-        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No_Climb'])
+        climb_type_pct = self.calculate_team_percentages(['Final_Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No_Climb'])
         shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
 
         oprs = self.calculate_opr("totalPoints")
@@ -259,14 +259,14 @@ class DataCalculator:
                 tele_low_avg,
                 tele_high_avg,
                 tele_miss_avg,
-                fouls_avg,
+                auto_miss_avg,
                 climb_time_avg,
                 auto_low_med,
                 auto_high_med,
                 tele_low_med,
                 tele_high_med,
                 tele_miss_med,
-                fouls_med,
+                auto_miss_med,
                 climb_time_med,
                 shooting_zone_pct,
                 climb_type_pct,

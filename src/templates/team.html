@@ -66,7 +66,7 @@ var radarCtx = document.getElementById('radarChart');
 var radarChart = new Chart(radarCtx, {
     type: 'radar',
     data: {
-        labels: ['Auto High Goal', 'Auto Low Goal', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score', 'Park Climb', "Hang Climb", "No Climb"],
+        labels: ['Auto High Goal', 'Auto Low Goal', 'AutoMisses', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score', 'Park Climb', "Hang Climb", "No Climb"],
         datasets: [{
             label: 'Team {{ id }}',
           data: [],
@@ -137,7 +137,7 @@ function fillData(){
         table.appendChild(matchRow);
     });
 
-    radarChart.data.datasets[0].data = [data["autoHighGoal"]/6,data["autoLowGoal"]/6, data["teleopHighGoal"]/12, data["teleopLowGoal"]/12,data["teleopMisses"]/12, data["endgameScore"]/25, data["climbTimeScore"]/30, data["parkClimb"], data["hangClimb"], data["noClimb"]]
+    radarChart.data.datasets[0].data = [data["autoHighGoal"]/6,data["autoLowGoal"]/6, data["autoMisses"]/6, data["teleopHighGoal"]/12, data["teleopLowGoal"]/12,data["teleopMisses"]/12, data["endgameScore"]/25, data["climbTimeScore"]/30, data["parkClimb"], data["hangClimb"], data["noClimb"]]
     radarChart.update()
 }
     
