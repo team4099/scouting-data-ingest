@@ -27,55 +27,7 @@
             <canvas id="radarChart"></canvas>
         </div>
         <div class="postMatch" id="MatchInfoDiv">
-            <div class="postMatchInfo" id="winnerDiv">
-                <p class="postMatchInfoLabel">Winner:</p>
-                <p id="winner"></p>
-            </div>
-            <div class="postMatchInfo" id="totalScoreDiv">
-                <p class="postMatchInfoLabel">Total Score:</p>
-                <p class="redInfo" id="redTotalScore"></p>
-                <p class="blueInfo" id="blueTotalScore"></p>
-            </div>
-            <div class="postMatchInfo" id="autoScoreDiv">
-                <p class="postMatchInfoLabel">Auto Score:</p>
-                <p class="redInfo" id="redAutoScore"></p>
-                <p class="blueInfo" id="blueAutoScore"></p>
-            </div>
-            <div class="postMatchInfo" id="totalTeleopDiv">
-                <p class="postMatchInfoLabel">Teleop Score:</p>
-                <p class="redInfo" id="redTeleopScore"></p>
-                <p class="blueInfo" id="blueTeleopScore"></p>
-            </div>
-            <div class="postMatchInfo" id="totalEndgameDiv">
-                <p class="postMatchInfoLabel">Endgame Score:</p>
-                <p class="redInfo" id="redEndgameScore"></p>
-                <p class="blueInfo" id="blueEndgameScore"></p>
-            </div>
-            <div class="postMatchInfo" id="totalRPDiv">
-                <p class="postMatchInfoLabel">Ranking Points:</p>
-                <p class="redInfo" id="redRP"></p>
-                <p class="blueInfo" id="blueRP"></p>
-            </div>
-            <div class="postMatchInfo" id="autoHighDiv">
-                <p class="postMatchInfoLabel">Auto High Goal Points:</p>
-                <p class="redInfo" id="redAutoHighScore"></p>
-                <p class="blueInfo" id="blueAutoHighScore"></p>
-            </div>
-            <div class="postMatchInfo" id="autoLowDiv">
-                <p class="postMatchInfoLabel">Auto Low Goal Points:</p>
-                <p class="redInfo" id="redAutoLowScore"></p>
-                <p class="blueInfo" id="blueAutoLowScore"></p>
-            </div>
-            <div class="postMatchInfo" id="teleopHighDiv">
-                <p class="postMatchInfoLabel">Teleop High Goal Points:</p>
-                <p class="redInfo" id="redTeleopHighScore"></p>
-                <p class="blueInfo" id="blueTeleopHighScore"></p>
-            </div>
-            <div class="postMatchInfo" id="teleopLowDiv">
-                <p class="postMatchInfoLabel">Teleop Low Goal Points:</p>
-                <p class="redInfo" id="redTeleopLowScore"></p>
-                <p class="blueInfo" id="blueTeleopLowScore"></p>
-            </div>
+            <table id="ResultTable"></table>
         </div>
     </div>
     <div id="LowerSection">
@@ -157,6 +109,12 @@
     #MatchInfoDiv {
         display: flex;
         flex-direction: column;
+        margin-bottom: 2vh;
+        margin-top: 2vh;
+    }
+
+    #ResultTable {
+        margin: auto;
     }
 
     .postMatchInfo {
@@ -164,7 +122,19 @@
         flex-direction: row;
         justify-content: space-between;
     }
-    
+
+    table, th, td {
+        border: 1px solid black;
+        width: max-content;
+    }
+
+    td:nth-child(2) {
+        background-color: pink;
+    }
+
+    td:nth-child(3) {
+        background-color: lightblue;
+    }
     @media screen and (min-width: 768px) {
         #UpperSection {
             min-height: 2vh;
@@ -306,24 +276,46 @@ function fillData(){
       post.item(i).style.display = 'flex';
     }
     document.getElementById("timeLabel").innerText = "Finished at " + (new Date(data["actualTime"])).toLocaleString()
+
+    const table = document.getElementById("ResultTable");
+    table.replaceChildren();
+
+    var winnerRow = document.createElement("tr");
+    var winnerLabel = document.createElement("td");
+    var winnerValue = document.createElement("td");
+
+    winnerLabel.innerText = "Winner";
+    winnerValue.colSpan = 2;
+    winnerValue.style.textAlign = "center";
+
     if (data["winner"] == "red"){
-      document.getElementById("winner").style.color = "red"
-      document.getElementById("winner").innerText = "Red"
+        winnerValue.innerText = "Red";
+        winnerValue.style.backgroundColor = "pink";
     }else if (data["winner"] == "blue") {
-      document.getElementById("winner").style.color = "blue"
-      document.getElementById("winner").innerText = "Blue"
+        winnerValue.innerText = "Blue";
+        winnerValue.style.backgroundColor = "lightblue";
     }
 
-    ["red", "blue"].forEach((color) => {
-      document.getElementById(color+"TotalScore").innerText = data["score"][color]["totalScore"]
-      document.getElementById(color+"AutoScore").innerText = data["score"][color]["teleopScore"]
-      document.getElementById(color+"TeleopScore").innerText = data["score"][color]["autoScore"]
-      document.getElementById(color+"EndgameScore").innerText = data["score"][color]["endgameScore"]
-      document.getElementById(color+"RP").innerText = data["score"][color]["rankingPoints"]
-      document.getElementById(color+"AutoHighScore").innerText = data["score"][color]["autoHighGoal"]
-      document.getElementById(color+"AutoLowScore").innerText = data["score"][color]["autoLowGoal"]
-      document.getElementById(color+"TeleopHighScore").innerText = data["score"][color]["teleopHighGoal"]
-      document.getElementById(color+"TeleopLowScore").innerText = data["score"][color]["teleopLowGoal"]
+    winnerRow.appendChild(winnerLabel);
+    winnerRow.appendChild(winnerValue);
+    table.appendChild(winnerRow);
+
+    Object.entries(data["score"]).forEach((entry) => {
+        const [label, values] = entry;
+        var row = document.createElement("tr");
+        var header = document.createElement("td");
+        var red = document.createElement("td");
+        var blue = document.createElement("td");
+
+        header.innerText = label;
+        red.innerText = values["red"];
+        blue.innerText = values["blue"];
+
+        row.appendChild(header);
+        row.appendChild(red);
+        row.appendChild(blue);
+
+        table.appendChild(row);
     })
 
     oddsChart.data.datasets[0].data = [data["odds"]["red"]]
@@ -337,8 +329,8 @@ function fillData(){
       post.item(i).style.display = 'none';
     }
     document.getElementById("timeLabel").innerText = "Expected to be at " + (new Date(data["expectedTime"])).toLocaleString()
-    radarChart.data.datasets[0].data = Object.values(data["data"]["red"])
-    radarChart.data.datasets[1].data = Object.values(data["data"]["blue"])
+    radarChart.data.datasets[0].data = [data["data"]["red"]["autoHighGoal"]/25,data["data"]["red"]["autoLowGoal"]/25, data["data"]["red"]["teleopHighGoal"]/50, data["data"]["red"]["teleopLowGoal"]/50,data["data"]["red"]["teleopMisses"]/50, data["data"]["red"]["endgameScore"]/75, data["data"]["red"]["climbTimeScore"]/30]
+    radarChart.data.datasets[1].data = [data["data"]["blue"]["autoHighGoal"]/25,data["data"]["blue"]["autoLowGoal"]/25, data["data"]["blue"]["teleopHighGoal"]/50, data["data"]["blue"]["teleopLowGoal"]/50,data["data"]["blue"]["teleopMisses"]/50, data["data"]["blue"]["endgameScore"]/75, data["data"]["blue"]["climbTimeScore"]/30]
     radarChart.update()
     }
 }

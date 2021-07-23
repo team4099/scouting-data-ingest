@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team {{ id }}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='water.css') }}">
+    <script src="{{ url_for('static', filename='chart.js') }}"></script>
+</head>
+
+<body onload="reload()">
+    <div id="UpperSection">
+        <p id="matchKey"> <b>{{ teamid }}</b></p>
+        <p id="record"></p>
+        <button id="refreshButton" onclick="reload()">Refresh</button>
+        <p><a href="https://www.thebluealliance.com/team/{{ id }}">More at The Blue Alliance</a></p>
+    </div>
+    <div id="MiddleSection">
+        <table id="UpcomingMatches">
+
+        </table>
+        <div id="radarChartDiv">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+</body>
+
+
+<style>
+    #UpperSection {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    #MiddleSection {
+        padding-top: 2vh;
+        padding-bottom: 2vh;
+    }
+
+
+    #radarChartDiv {
+        width: 80vw;
+        margin: auto;
+    }
+
+    @media screen and (min-width: 768px) {
+        #UpperSection {
+            min-height: 3vh;
+        }
+
+        #refreshButton {
+            width: min-content;
+            left: 50%;
+        }
+
+        #radarChartDiv {
+            height: auto;
+            width: 30vw;
+        }
+    }
+</style>
+<script>
+var radarCtx = document.getElementById('radarChart');
+var radarChart = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+        labels: ['Auto High Goal', 'Auto Low Goal', 'Teleop High Goal', 'Teleop Low Goal', 'Teleop Misses', 'Endgame Score', 'Climb Time Score', 'Park Climb', "Hang Climb", "No Climb"],
+        datasets: [{
+            label: 'Team {{ id }}',
+          data: [],
+          fill: true,
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          borderColor: 'rgb(255, 99, 132)',
+          pointBackgroundColor: 'rgb(255, 99, 132)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgb(255, 99, 132)'
+        }
+        ]
+    },
+    options: {
+        elements: {
+            line: {
+                borderWidth: 3
+            }
+        },
+        scales: {
+            r: {
+                min: 0,
+                max: 1
+            }
+        }
+    },
+});
+
+function reload(){
+    var dataReq = new XMLHttpRequest();
+    dataReq.onload = fillData;
+    dataReq.open("get", window.location.href + "/data")
+    dataReq.send()
+  
+}
+
+function fillData(){
+    const data = JSON.parse(this.responseText);
+
+    document.getElementById("record").innerText = "Record: " + data["record"]
+
+
+    const table = document.getElementById("UpcomingMatches");
+    table.replaceChildren();
+
+    Object.entries(data["nextMatches"]).forEach((entry) => {
+        const [match_key, data] = entry;
+
+        var matchRow = document.createElement("tr");
+        var matchLabel = document.createElement("td");
+        var matchAlliance = document.createElement("td");
+        var matchTime = document.createElement("td");
+
+        matchLabel.innerHTML = "<a href='" + window.location.origin + "/matches/" + match_key + "'>" + match_key + "</a>"
+        
+    if (data["alliance"] == "Red"){
+        matchAlliance.innerText = "Red";
+        matchAlliance.style.backgroundColor = "pink";
+    }else if (data["alliance"] == "Blue") {
+        matchAlliance.innerText = "Blue";
+        matchAlliance.style.backgroundColor = "lightblue";
+    }
+        matchTime.innerText = (new Date(data["time"])).toLocaleString();
+
+        matchRow.appendChild(matchLabel);
+        matchRow.appendChild(matchAlliance);
+        matchRow.appendChild(matchTime);
+        table.appendChild(matchRow);
+    });
+
+    radarChart.data.datasets[0].data = [data["autoHighGoal"]/6,data["autoLowGoal"]/6, data["teleopHighGoal"]/12, data["teleopLowGoal"]/12,data["teleopMisses"]/12, data["endgameScore"]/25, data["climbTimeScore"]/30, data["parkClimb"], data["hangClimb"], data["noClimb"]]
+    radarChart.update()
+}
+    
+function addOptions(){
+
+    const info = JSON.parse(this.responseText);
+    var dropdown = document.getElementById("NameSelect");
+    var placeholder = document.createElement("option");
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    placeholder.value = "";
+    placeholder.innerText = "--";
+    dropdown.replaceChildren();
+    dropdown.append(placeholder);
+
+    info["names"].forEach((name) => {
+        var option = document.createElement("option");
+        option.value = name;
+        option.innerText = name;
+        dropdown.append(option)
+    })
+}
+
+</script>
+
+</html>

@@ -77,7 +77,11 @@ def match_data(key):
 
     payload = {}
     match = data_accessor.get_match_data(match_key=key, type_df=True,occured=False).loc[0]
-    teams = [data_accessor.get_calculated_team_data(t.teamid,type_df=False)[0] for t in data_accessor.get_alliance(key,type_df=False)]
+    teams = []
+    for t in data_accessor.get_alliance(key, type_df=False):
+            team_data = data_accessor.get_calculated_team_data(t.teamid, type_df=False)
+            if len(team_data) > 0:
+                    teams.append(team_data[0])
 
     alliance = {}
     alliance["red"] = [t.teamid for t in data_accessor.get_alliance(key,"Red", type_df=False)]
@@ -88,17 +92,17 @@ def match_data(key):
         payload["occurred"] = True
         payload["actualTime"] = match["actual_time"]
         payload["winner"] = match["winning_alliance"]
-        score = {"red":{}, "blue":{}}
+        score = {"totalScore":{}, "teleopScore":{}, "autoScore":{}, "endgameScore":{}, "rankingPoints":{}, "autoHighGoal":{}, "autoLowGoal":{}, "teleopHighGoal":{}, "teleopLowGoal":{}}
         for color in ["red","blue"] :
-            score[color]["totalScore"] = match[f"alliances.{color}.score"]
-            score[color]["teleopScore"] = match[f"score_breakdown.{color}.teleopPoints"]
-            score[color]["autoScore"] = match[f"score_breakdown.{color}.autoPoints"]
-            score[color]["endgameScore"] = match[f"score_breakdown.{color}.endgamePoints"]
-            score[color]["rankingPoints"] = match[f"score_breakdown.{color}.rp"]
-            score[color]["autoHighGoal"] = match[f"score_breakdown.{color}.autoCellsOuter"] + match[f"score_breakdown.{color}.autoCellsInner"]
-            score[color]["autoLowGoal"] = match[f"score_breakdown.{color}.autoCellsBottom"]
-            score[color]["teleopHighGoal"] = match[f"score_breakdown.{color}.teleopCellsOuter"] + match[f"score_breakdown.{color}.teleopCellsInner"]
-            score[color]["teleopLowGoal"] = match[f"score_breakdown.{color}.teleopCellsBottom"]
+            score["totalScore"][color] = match[f"alliances.{color}.score"]
+            score["teleopScore"][color] = match[f"score_breakdown.{color}.teleopPoints"]
+            score["autoScore"][color] = match[f"score_breakdown.{color}.autoPoints"]
+            score["endgameScore"][color] = match[f"score_breakdown.{color}.endgamePoints"]
+            score["rankingPoints"][color] = match[f"score_breakdown.{color}.rp"]
+            score["autoHighGoal"][color] = match[f"score_breakdown.{color}.autoCellsOuter"] + match[f"score_breakdown.{color}.autoCellsInner"]
+            score["autoLowGoal"][color] = match[f"score_breakdown.{color}.autoCellsBottom"]
+            score["teleopHighGoal"][color] = match[f"score_breakdown.{color}.teleopCellsOuter"] + match[f"score_breakdown.{color}.teleopCellsInner"]
+            score["teleopLowGoal"][color] = match[f"score_breakdown.{color}.teleopCellsBottom"]
         payload["score"] = score
         payload["odds"] = data_accessor.get_prediction(match=key)["prediction"].value_counts(normalize=True).to_dict()
     else:
@@ -106,12 +110,12 @@ def match_data(key):
         payload["expectedTime"] = match["predicted_time"]
         data = {"red":{}, "blue":{}}
         for color in ["red","blue"]:
-            data[color]["autoHighGoal"] = sum([t.Auto_High_Goal_avg for t in teams if t != [] and t.teamid in alliance[color]])
-            data[color]["autoLowGoal"] = sum([t.Auto_Low_Goal_avg for t in teams if t != [] and t.teamid in alliance[color]])
-            data[color]["teleopHighGoal"] = sum([t.Teleop_High_Goal_avg for t in teams if t != [] and t.teamid in alliance[color]])
-            data[color]["teleopLowGoal"] = sum([t.Teleop_Low_Goal_avg for t in teams if t != [] and t.teamid in alliance[color]])
-            data[color]["teleopMisses"] = sum([t.Teleop_Misses_avg for t in teams if t != [] and t.teamid in alliance[color]])
-            data[color]["endgameScore"] = sum([t.Climb_Type_Park * 5 + t.Climb_Type_Hang * 25 for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["autoHighGoal"] = sum([(0 if t.Auto_High_Goal_avg is None else t.Auto_High_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["autoLowGoal"] = sum([(0 if t.Auto_Low_Goal_avg is None else t.Auto_Low_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["teleopLowGoal"] = sum([(0 if t.Teleop_Low_Goal_avg is None else t.Teleop_Low_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["teleopHighGoal"] = sum([(0 if t.Teleop_High_Goal_avg is None else t.Teleop_High_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["teleopMisses"] = sum([(0 if t.Teleop_Misses_avg is None else t.Teleop_Misses_avg) for t in teams if t != [] and t.teamid in alliance[color]])
+            data[color]["endgameScore"] = sum([(0 if t.Climb_Type_Park is None else t.Climb_Type_Park) * 5 + (0 if t.Climb_Type_Hang is None else t.Climb_Type_Hang) * 25 for t in teams if t != [] and t.teamid in alliance[color]])
             data[color]["climbTimeScore"] = sum([30 - t.Climb_Time_avg for t in teams if t != [] and t.teamid in alliance[color] and t.Climb_Time_avg is not None])
         payload["data"] = data
 
@@ -121,7 +125,7 @@ def match_data(key):
 def team(teamid):
     if not teamid.startswith("frc"):
         teamid = "frc" + teamid
-    return render_template("team.html", teamid=teamid)
+    return render_template("team.html", teamid=teamid, id=teamid[3:])
 
 @app.route("/team/<teamid>/data")
 def team_data(teamid):
@@ -143,10 +147,24 @@ def team_data(teamid):
 
     matches = data_accessor.get_match_data(occured=False)
     team_matches = data_accessor.get_alliance(teamid=teamid)["matchid"].tolist()
-    next_match = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] == datetime.datetime.fromtimestamp(0))].sort_values(by="predicted_time")["matchId"].iloc[:2].tolist()
-    print(next_match)
-    payload["nextMatch"] = next_match
-    payload["nextAlliance"] = [data_accessor.get_alliance(teamid=teamid, match_key=nm, type_df=False)[0].color for nm in next_match]
+    previous_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] != datetime.datetime.fromtimestamp(0))].sort_values(by="actual_time")[["matchId","winning_alliance"]]
+    win = 0
+    loss = 0
+    tie = 0
+    for index, row in previous_match_data.iterrows():
+            alliance = data_accessor.get_alliance(teamid=teamid, match_key=row["matchId"], type_df=False)[0].color.lower()
+            if row["winning_alliance"] != "Tie":
+                    if alliance == row["winning_alliance"].lower():
+                            win += 1
+                    else:
+                            loss += 1
+    payload["record"] = f"{win}-{loss}-{tie}"
+    next_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] == datetime.datetime.fromtimestamp(0))].sort_values(by="predicted_time")
+    next_matches = next_match_data["matchId"].iloc[:3].tolist()
+    next_alliances = [data_accessor.get_alliance(teamid=teamid, match_key=nm, type_df=False)[0].color for nm in next_matches]
+    next_times = next_match_data["predicted_time"].iloc[:3].tolist()
+
+    payload["nextMatches"] = {m:{"alliance":a, "time":t} for m,a,t in zip(next_matches, next_alliances, next_times)}
     return payload
 
 
