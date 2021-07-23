@@ -43,6 +43,7 @@ class Config:
         self.spreadsheet = os.getenv("G_SHEET")
         self.simulator_spreadsheet = os.getenv("SIM_SHEET")
         self.simulator_url = os.getenv("SIM_URL")
+        self.db_url = os.getenv("MYSQL_URL")
         self.db_user = os.getenv("MYSQL_USER")
         self.db_pwd = os.getenv("MYSQL_PASSWORD")
         self.event = os.getenv("EVENT")
@@ -138,7 +139,7 @@ class Config:
 
         try:
             create_engine(
-                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@db/scouting'
+                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@{self.db_url}/scouting'
             )
         except pymysql.err.OperationalError:
             self.log.error(

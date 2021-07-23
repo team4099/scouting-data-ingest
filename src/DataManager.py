@@ -37,7 +37,7 @@ class DataManager:
         # Connecting to MySQL
         self.log.info("Connecting to MySQL")
         self.engine = create_engine(
-            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@db/scouting'
+            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@{self.config.db_url}/scouting'
         )
         self.session_template = sessionmaker()
         self.session_template.configure(bind=self.engine)
@@ -53,7 +53,6 @@ class DataManager:
             "team",
             "warnings",
             "info",
-            "predictions",
             "alliances"
         ]
         for t in tables:

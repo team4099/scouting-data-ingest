@@ -16,9 +16,8 @@ from SQLObjects import Base
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "Team4099!"
-app.debug = True
 config = Config(logger,False)
-engine = create_engine(f'mysql+pymysql://{config.db_user}:{config.db_pwd}@db/scouting')
+engine = create_engine(f'mysql+pymysql://{config.db_user}:{config.db_pwd}@{config.db_url}/scouting')
 session_template = sessionmaker()
 session_template.configure(bind=engine)
 session = session_template()
