@@ -6,12 +6,12 @@ from DataInput import DataInput
 from DataCalculator import DataCalculator
 import pandas as pd
 from sqlalchemy import create_engine,Column, Integer, String, Text, ForeignKey, Float, null
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from Config import Config
 from DataAccessor import DataAccessor
 from loguru import logger
 import json
-from SQLObjects import Base
+from SQLObjects import Base, Teams
 # send help I don't know how to organize a flask application
 
 app = Flask(__name__)
@@ -23,10 +23,10 @@ session_template.configure(bind=engine)
 session = session_template()
 connection = engine.connect()
 data_accessor = DataAccessor(engine,session,connection,config)
-data_input = DataInput(engine,session,connection,data_accessor, config)
 calculated_team_data_object = None
+team_data_object = None
 
-with open("CalculatedTeamData2020.json","r") as f:
+with open("CalculatedTeamData2021.json","r") as f:
         t_data = {
             "__tablename__": f'CalculatedTeamData{config.year}',
             "__table_args__": {"extend_existing": True},
@@ -41,7 +41,26 @@ with open("CalculatedTeamData2020.json","r") as f:
             {**calc_data_config, **t_data},
         )
 
+with open("TeamData2021.json","r") as f:
+        t_data = {
+            "__tablename__": f'TeamData{config.year}',
+            "__table_args__": {"extend_existing": True},
+            "id": Column(Integer, primary_key=True),
+            "teamid": Column(String(50), ForeignKey("team.id")),
+        }
+        calc_data_config = json.load(f)
+        calc_data_config = {
+            k: eval(v) for k, v in calc_data_config.items()
+        }
+        team_data_object = type(
+            f'TeamData{config.year}',
+            (Base,),
+            {**calc_data_config, **t_data},
+        )
+        Teams.data_list = relationship(f'TeamData{config.year}')
+
 data_accessor.CalculatedTeamDataObject = calculated_team_data_object
+data_accessor.TeamDataObject = team_data_object
 
 @app.route("/warnings", methods=["GET", "POST"])
 def warnings():

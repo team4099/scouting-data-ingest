@@ -7,6 +7,7 @@ import requests
 from loguru import logger
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, Boolean, Float, null, DateTime
 from sqlalchemy.orm import relationship
+import json
 
 from SQLObjects import Base, Matches, Teams
 
@@ -286,6 +287,8 @@ class DataInput:
             #    "Attributes": matchDataConfig,
             #},
         }
+        with open("TeamData2021Config.json","w") as f:
+            json.dump(SQLConfig,f)
         self.log.info("Configuring SQL")
         self.configure_sql(SQLConfig)
 
