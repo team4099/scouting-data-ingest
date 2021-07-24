@@ -248,7 +248,7 @@ class DataCalculator:
         climb_type_pct = self.calculate_team_percentages(['Final_Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No_Climb'])
         shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
 
-        oprs = self.calculate_opr("totalPoints")
+        # oprs = self.calculate_opr("totalPoints")
         comments = self.group_notes()
 
         self.log.info("Adding data to SQL")

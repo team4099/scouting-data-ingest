@@ -195,57 +195,57 @@ class DataInput:
         """
             Parses the Config file
         """
-        headers = {
-            "X-TBA-Auth-Key": self.config.tba_key,
-            "If-Modified-Since": self.tba_last_modified,
-        }
-        self.log.info("Getting TBA Data")
-        if self.config.simulation:
-            url = f"{self.config.simulator_url}/matches"
-        else:
-            url = f"https://www.thebluealliance.com/api/v3/event/{self.config.year}{self.config.event}/matches"
-        r = requests.get(
-            url,
-            headers=headers,
-        )
-        self.log.info("Cleaning and Preparing data")
-        data = pd.json_normalize(r.json())
-        drop_list = [
-            "videos",
-            "score_breakdown",
-            "alliances.blue.dq_team_keys",
-            "alliances.blue.team_keys",
-            "alliances.blue.surrogate_team_keys",
-            "alliances.red.dq_team_keys",
-            "alliances.red.team_keys",
-            "alliances.red.surrogate_team_keys",
-        ]
-        for d in drop_list:
-            try:
-                data = data.drop(d, axis=1)
-            except KeyError:
-                pass
-        
-        data['time'] = data['time'].map(lambda x: pd.Timestamp(x, unit='s'))
-        data['post_result_time'] = data['post_result_time'].map(lambda x: pd.Timestamp(x, unit='s'))
-        data['predicted_time'] = data['predicted_time'].map(lambda x: pd.Timestamp(x, unit='s'))
-        data['actual_time'] = data['actual_time'].map(lambda x: pd.Timestamp(x, unit='s'))
-        data = data.convert_dtypes()
-        self.log.info("Constructing Configuration")
-        matchDataConfig = {}
-        for col, dtype in zip(data.columns, data.dtypes):
-            if pd.Int64Dtype.is_dtype(dtype):
-                matchDataConfig[col] = "Column(Float())"
-            elif pd.StringDtype.is_dtype(dtype):
-                matchDataConfig[col] = "Column(Text(500))"
-            elif pd.BooleanDtype.is_dtype(dtype):
-                matchDataConfig[col] = "Column(Boolean())"
-            elif 'datetime64[ns]' == dtype:
-                matchDataConfig[col] = "Column(DateTime())"
-            else:
-                self.log.warning(
-                    f"In {col}, {dtype} is not a configured datatype. It will not be used."
-                )
+        # headers = {
+        #     "X-TBA-Auth-Key": self.config.tba_key,
+        #     "If-Modified-Since": self.tba_last_modified,
+        # }
+        # self.log.info("Getting TBA Data")
+        # if self.config.simulation:
+        #     url = f"{self.config.simulator_url}/matches"
+        # else:
+        #     url = f"https://www.thebluealliance.com/api/v3/event/{self.config.year}{self.config.event}/matches"
+        # r = requests.get(
+        #     url,
+        #     headers=headers,
+        # )
+        # self.log.info("Cleaning and Preparing data")
+        # data = pd.json_normalize(r.json())
+        # drop_list = [
+        #     "videos",
+        #     "score_breakdown",
+        #     "alliances.blue.dq_team_keys",
+        #     "alliances.blue.team_keys",
+        #     "alliances.blue.surrogate_team_keys",
+        #     "alliances.red.dq_team_keys",
+        #     "alliances.red.team_keys",
+        #     "alliances.red.surrogate_team_keys",
+        # ]
+        # for d in drop_list:
+        #     try:
+        #         data = data.drop(d, axis=1)
+        #     except KeyError:
+        #         pass
+
+        # data['time'] = data['time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        # data['post_result_time'] = data['post_result_time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        # data['predicted_time'] = data['predicted_time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        # data['actual_time'] = data['actual_time'].map(lambda x: pd.Timestamp(x, unit='s'))
+        # data = data.convert_dtypes()
+        # self.log.info("Constructing Configuration")
+        # matchDataConfig = {}
+        # for col, dtype in zip(data.columns, data.dtypes):
+        #     if pd.Int64Dtype.is_dtype(dtype):
+        #         matchDataConfig[col] = "Column(Float())"
+        #     elif pd.StringDtype.is_dtype(dtype):
+        #         matchDataConfig[col] = "Column(Text(500))"
+        #     elif pd.BooleanDtype.is_dtype(dtype):
+        #         matchDataConfig[col] = "Column(Boolean())"
+        #     elif 'datetime64[ns]' == dtype:
+        #         matchDataConfig[col] = "Column(DateTime())"
+        #     else:
+        #         self.log.warning(
+        #             f"In {col}, {dtype} is not a configured datatype. It will not be used."
+        #        )
         self.log.info("Getting sheet data")
         gc = gspread.service_account(f'./config/{self.config.google_credentials}')
         if self.config.simulation:
@@ -281,10 +281,10 @@ class DataInput:
                 "Year": self.config.year,
                 "Attributes": teamDataConfig,
             },
-            "MatchDataConfig": {
-                "Year": self.config.year,
-                "Attributes": matchDataConfig,
-            },
+            #"MatchDataConfig": {
+            #    "Year": self.config.year,
+            #    "Attributes": matchDataConfig,
+            #},
         }
         self.log.info("Configuring SQL")
         self.configure_sql(SQLConfig)
@@ -316,23 +316,23 @@ class DataInput:
         self.dataAccessor.TeamDataObject = self.TeamDataObject
         Teams.data_list = relationship(f'TeamData{SQLconfig["TeamDataConfig"]["Year"]}')
 
-        self.log.info("Constructing MatchData Object")
-        m_data = {
-            "__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
-            "__table_args__": {"extend_existing": True},
-            "id": Column(Integer, primary_key=True),
-            "matchId": Column(String(50), ForeignKey("match.id")),
-        }
+        # self.log.info("Constructing MatchData Object")
+        # m_data = {
+        #     "__tablename__": f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
+        #     "__table_args__": {"extend_existing": True},
+        #     "id": Column(Integer, primary_key=True),
+        #     "matchId": Column(String(50), ForeignKey("match.id")),
+        # }
 
-        SQLconfig["MatchDataConfig"]["Attributes"] = {
-            k: eval(v) for k, v in SQLconfig["MatchDataConfig"]["Attributes"].items()
-        }
-        self.MatchDataObject = type(
-            f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
-            (Base,),
-            {**SQLconfig["MatchDataConfig"]["Attributes"], **m_data},
-        )
-        self.dataAccessor.MatchDataObject = self.MatchDataObject
-        Matches.data_list = relationship(
-            f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False
-        )
+        # SQLconfig["MatchDataConfig"]["Attributes"] = {
+        #     k: eval(v) for k, v in SQLconfig["MatchDataConfig"]["Attributes"].items()
+        # }
+        # self.MatchDataObject = type(
+        #     f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}',
+        #     (Base,),
+        #     {**SQLconfig["MatchDataConfig"]["Attributes"], **m_data},
+        # )
+        # self.dataAccessor.MatchDataObject = self.MatchDataObject
+        # Matches.data_list = relationship(
+        #     f'MatchData{SQLconfig["MatchDataConfig"]["Year"]}', uselist=False
+        # )

@@ -75,7 +75,7 @@ def match_data(key):
         key = f"{config.year}{config.event}_{key}"
 
     payload = {}
-    match = data_accessor.get_match_data(match_key=key, type_df=True,occured=False).loc[0]
+    # match = data_accessor.get_match_data(match_key=key, type_df=True,occured=False).loc[0]
     teams = []
     for t in data_accessor.get_alliance(key, type_df=False):
             team_data = data_accessor.get_calculated_team_data(t.teamid, type_df=False)
@@ -87,7 +87,9 @@ def match_data(key):
     alliance["blue"] = [t.teamid for t in data_accessor.get_alliance(key,"Blue", type_df=False)]
     payload["alliance"] = alliance
 
-    if match["actual_time"] != datetime.datetime.fromtimestamp(0):
+    # Make this always false
+    # if match["actual_time"] != datetime.datetime.fromtimestamp(0):
+    if False:
         payload["occurred"] = True
         payload["actualTime"] = match["actual_time"]
         payload["winner"] = match["winning_alliance"]
@@ -106,7 +108,8 @@ def match_data(key):
         payload["odds"] = data_accessor.get_prediction(match=key)["prediction"].value_counts(normalize=True).to_dict()
     else:
         payload["occurred"] = False
-        payload["expectedTime"] = match["predicted_time"]
+        # payload["expectedTime"] = match["predicted_time"]
+        payload["expectedtime"] = "N/A"
         data = {"red":{}, "blue":{}}
         for color in ["red","blue"]:
             data[color]["autoHighGoal"] = sum([(0 if t.Auto_High_Goal_avg is None else t.Auto_High_Goal_avg) for t in teams if t != [] and t.teamid in alliance[color]])
@@ -146,42 +149,44 @@ def team_data(teamid):
     payload["noClimb"] = team.Climb_Type_No_Climb
     payload["climbTimeScore"] = team.Climb_Time_avg
 
-    matches = data_accessor.get_match_data(occured=False)
-    team_matches = data_accessor.get_alliance(teamid=teamid)["matchid"].tolist()
-    previous_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] != datetime.datetime.fromtimestamp(0))].sort_values(by="actual_time")[["matchId","winning_alliance"]]
-    win = 0
-    loss = 0
-    tie = 0
-    for index, row in previous_match_data.iterrows():
-            alliance = data_accessor.get_alliance(teamid=teamid, match_key=row["matchId"], type_df=False)[0].color.lower()
-            if row["winning_alliance"] != "Tie":
-                    if alliance == row["winning_alliance"].lower():
-                            win += 1
-                    else:
-                            loss += 1
-    payload["record"] = f"{win}-{loss}-{tie}"
-    next_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] == datetime.datetime.fromtimestamp(0))].sort_values(by="predicted_time")
-    next_matches = next_match_data["matchId"].iloc[:3].tolist()
-    next_alliances = [data_accessor.get_alliance(teamid=teamid, match_key=nm, type_df=False)[0].color for nm in next_matches]
-    next_times = next_match_data["predicted_time"].iloc[:3].tolist()
+    # matches = data_accessor.get_match_data(occured=False)
+    # team_matches = data_accessor.get_alliance(teamid=teamid)["matchid"].tolist()
+    # previous_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] != datetime.datetime.fromtimestamp(0))].sort_values(by="actual_time")[["matchId","winning_alliance"]]
+    # win = 0
+    # loss = 0
+    # tie = 0
+    # for index, row in previous_match_data.iterrows():
+    #         alliance = data_accessor.get_alliance(teamid=teamid, match_key=row["matchId"], type_df=False)[0].color.lower()
+    #         if row["winning_alliance"] != "Tie":
+    #                 if alliance == row["winning_alliance"].lower():
+    #                         win += 1
+    #                 else:
+    #                         loss += 1
+    # payload["record"] = f"{win}-{loss}-{tie}"
+    # next_match_data = matches[(matches["matchId"].isin(team_matches)) & (matches["actual_time"] == datetime.datetime.fromtimestamp(0))].sort_values(by="predicted_time")
+    # next_matches = next_match_data["matchId"].iloc[:3].tolist()
+    # next_alliances = [data_accessor.get_alliance(teamid=teamid, match_key=nm, type_df=False)[0].color for nm in next_matches]
+    # next_times = next_match_data["predicted_time"].iloc[:3].tolist()
 
-    payload["nextMatches"] = {m:{"alliance":a, "time":t} for m,a,t in zip(next_matches, next_alliances, next_times)}
+    # payload["nextMatches"] = {m:{"alliance":a, "time":t} for m,a,t in zip(next_matches, next_alliances, next_times)}
     return payload
 
 
 @app.route("/match/<key>/prediction", methods=["POST"])
 def match_prediction(key):
-    if not key.startswith(f"{config.year}{config.event}"):
-        key = f"{config.year}{config.event}_{key}"
+        return "N/A"
+    # if not key.startswith(f"{config.year}{config.event}"):
+    #    key = f"{config.year}{config.event}_{key}"
 
-    match = data_accessor.get_match_data(match_key=key, type_df=True,occured=False).loc[0]
+    #match = data_accessor.get_match_data(match_key=key, type_df=True,occured=False).loc[0]
 
-    if match["actual_time"] != datetime.datetime.fromtimestamp(0):
-        return "Invalid: Match Occurred"
-    else:
-        data = request.json
-        data_accessor.add_prediction(data["scout"], key, data["prediction"])
-        return "Valid"
+    #if match["actual_time"] != datetime.datetime.fromtimestamp(0):
+    #if False:
+    #    return "Invalid: Match Occurred"
+    #else:
+    #    data = request.json
+    #    data_accessor.add_prediction(data["scout"], key, data["prediction"])
+    #    return "Valid"
 
 
 @app.route("/")
