@@ -11,6 +11,7 @@ from DataAccessor import DataAccessor
 from DataCalculator import DataCalculator
 from DataInput import DataInput
 from DataProcessor import DataProcessor
+from SQLObjects import Base
 
 
 class DataManager:
@@ -32,12 +33,13 @@ class DataManager:
                 self.log.info("Configuration Validated!")
         else:
             self.log.warning(
-                "You have chosen to skip the configuration validation. Be aware that you may encounter errors.")
+                "You have chosen to skip the configuration validation. Be aware that you may encounter errors."
+            )
 
         # Connecting to MySQL
         self.log.info("Connecting to MySQL")
         self.engine = create_engine(
-            f'mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@db/scouting'
+            f"mysql+pymysql://{self.config.db_user}:{self.config.db_pwd}@{self.config.db_host}/scouting"
         )
         self.session_template = sessionmaker()
         self.session_template.configure(bind=self.engine)
@@ -45,27 +47,25 @@ class DataManager:
         self.connection = self.engine.connect()
 
         self.log.info("Erasing existing data")
-        tables = [
-            f"MatchData{self.config.year}",
-            "`match`",
-            f"TeamData{self.config.year}",
-            f"CalculatedTeamData{self.config.year}",
-            "team",
-            "warnings",
-            "info",
-            "predictions",
-            "alliances"
-        ]
-        for t in tables:
-            tex = text(f"drop table if exists {t}")
-            self.connection.execute(tex)
+        Base.metadata.drop_all(self.engine)
         self.session.commit()
+        Base.metadata.create_all(self.engine)
 
         self.log.info("Loading Components")
-        self.data_accessor = DataAccessor(self.engine, self.session, self.connection, self.config)
-        self.data_input = DataInput(self.engine, self.session, self.connection, self.data_accessor, self.config)
+        self.data_accessor = DataAccessor(
+            self.engine, self.session, self.connection, self.config
+        )
+        self.data_input = DataInput(
+            self.engine,
+            self.session,
+            self.connection,
+            self.data_accessor,
+            self.config,
+        )
         self.data_processor = DataProcessor(self.data_accessor, self.config)
-        self.data_calculator = DataCalculator(self.engine, self.session, self.connection, self.data_accessor, self.config)
+        self.data_calculator = DataCalculator(
+            self.engine, self.session, self.connection, self.data_accessor, self.config
+        )
 
         self.interval = interval
         self.data_accessor.add_info("Status", "Paused")
@@ -81,7 +81,7 @@ class DataManager:
         """
         self.data_accessor.update_info("Task", "Getting Data")
         self.log.info(f"Getting data for {self.config.year + self.config.event}")
-        self.data_input.get_tba_data(self.config.year + self.config.event)
+        self.data_input.get_tba_data()
         self.data_input.get_sheet_data(self.config.year + self.config.event)
         self.session.commit()
 

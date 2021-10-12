@@ -1,9 +1,29 @@
-import datetime
+from datetime import datetime
+import pytz
 import pandas as pd
 from sqlalchemy import exists, update
 import copy
+from typing import Union, Optional, List, Literal
 
-from SQLObjects import Alliance, Info, Matches, Teams, Warnings, Predictions, Scouts
+from sqlalchemy import Boolean
+from sqlalchemy.sql.elements import Null
+
+from SQLObjects import (
+    Alliance,
+    ClimbType,
+    CompLevel,
+    Match,
+    Team,
+    Warning,
+    Info,
+    Scout,
+    Prediction,
+    MatchDatum,
+    TeamDatum,
+    CalculatedTeamDatum,
+    match_data_map,
+    team_data_map,
+)
 from terminal import logger
 
 
@@ -26,305 +46,326 @@ class DataAccessor:
         self.log.info("Initializing Variables")
         self.warning_dict = {}
         self.last_checked = None
-        self.TeamDataObject = None
-        self.MatchDataObject = None
-        self.CalculatedTeamDataObject = None
 
         self.log.info("DataAccessor Loaded!")
 
-    def get_teams(self):
+    def get_match(self, key: str) -> Optional[Match]:
         """
-
-        Get all the stored teams
-
-        :return: A Dataframe containing the Team IDs
-        :rtype: pandas.DataFrame
+        Get a match by id
         """
-        return pd.DataFrame(pd.read_sql_query(self.session.query(Teams).statement, self.sql_connection())['id'])
+        query = self.session.query(Match).filter(Match.id == key).first()
+        return query
 
-    def get_team_data(self, team_id=None, match_key=None, color=None, driver_station=None, type_df: bool = True):
+    def get_team(self, id: str) -> Optional[Team]:
         """
-
-        Gets a TeamData object with multiple optional filters
-
-        :param team_id: A Team ID to be filtered by
-        :type team_id: Union[str, None]
-        :param match_key: A Match Key to be filtered by
-        :type match_key: Union[str, None]
-        :param color: An Alliance color to be filtered by
-        :type color: Union[str, None]
-        :param driver_station: A Driver Station number to be filtered by
-        :type driver_station: Union[int, None]
-        :param type_df: Whether this function should return a Dataframe or List
-        :type type_df: bool
-        :return: The requested data.
-        :rtype: Union[pandas.DataFrame, List]
+        Get a team by id
         """
-        query = self.session.query(self.TeamDataObject)
-        if team_id is not None:
-            query = query.filter(self.TeamDataObject.teamid == team_id)
-        if match_key is not None:
-            query = query.filter(self.TeamDataObject.Match_Key == match_key)
-        if color is not None:
-            query = query.filter(self.TeamDataObject.Alliance == color)
-        if driver_station is not None:
-            query = query.filter(self.TeamDataObject.Driver_Station == driver_station)
+        query = self.session.query(Team).filter(Team.id == id).first()
+        return query
 
-        if type_df:
-            return pd.read_sql_query(query.statement, self.sql_connection())
-        else:
-            return query[:]
-
-    def get_match_data(self, match_key=None, color=None, type_df=True, occured=True):
+    def get_warnings(
+        self,
+        match_id: Optional[str] = None,
+        alliance: Optional[Alliance] = None,
+        category: Optional[str] = None,
+        ignore: Optional[bool] = None,
+    ) -> Optional[List[Warning]]:
         """
-
-        Gets a MatchData object with multiple optional filters
-
-        :param match_key: A Match Key to be filtered by
-        :type match_key: Union[str, None]
-        :param color: An Alliance color to be filtered by
-        :type color: Union[str, None]
-        :param type_df: Whether this function should return a Dataframe or List
-        :type type_df: bool
-        :return: The requested data.
-        :rtype: pandas.DataFrame
+        Get a warning by id
         """
-        query = self.session.query(self.MatchDataObject)
-        if occured:
-            query = query.filter(self.MatchDataObject.actual_time != datetime.datetime.fromtimestamp(0))
-        if match_key is not None:
-            query = query.filter(self.MatchDataObject.matchId == match_key)
-        if type_df:
-            return pd.read_sql_query(query.statement, self.sql_connection())
-        else:
-            return query[:]
+        query = self.session.query(Warning)
+        if match_id:
+            query = query.filter(Warning.match_id == match_id)
+        if alliance:
+            query = query.filter(Warning.alliance == alliance)
+        if category:
+            query = query.filter(Warning.category == category)
+        if ignore:
+            query = query.filter(Warning.ignore == ignore)
 
-    def get_teams_in_match(self, match_key=None):
-        query = self.session.query(self.TeamDataObject)
+        return query.all() if query is not None else None
 
-        if match_key is not None:
-            query = query.filter(self.TeamDataObject.Match_Key.in_(match_key))
-
-        data = pd.read_sql_query(query.statement, self.sql_connection())
-        return data.groupby(["Match_Key", "Alliance"])["teamid"].apply(list)
-
-    def add_match_data(self, key: str, data):
+    def get_info(
+        self,
+        id: str,
+    ) -> Optional[Info]:
         """
-
-        Adds a match to the database if it doesn't already exist.
-
-        :param key: Match Key
-        :type key: str
-        :param data: A year-specific Match Data Object
-        :type data: DataInput.MatchData2020
-        :rtype: None
+        Get a info by id
         """
-        occurred = False
-        if self.check_if_match_data_exists(key):
-            if not self.check_if_match_data_exists(key, data.actual_time):
-                occurred = True
-                match_vars = dict(vars(data))
-                match_vars.pop("_sa_instance_state")
-                update_stmt = update(self.MatchDataObject).where(self.MatchDataObject.matchId == key).values(**match_vars)
-                self.connection.execute(update_stmt)
-                self.session.commit()
-                self.process_predictions(key, data.winning_alliance)
-                return
-            else:
-                self.log.warning(f"MatchData for match {key} already exists. It will not be added.")
-                return
+        query = self.session.query(Info).filter(Info.id == id).first()
+        return query
 
-        m = Matches(id=key, data_list=data)
-
-        self.session.add(m)
-
-    def add_alliances_for_match(self, key, red_teams, blue_teams):
-        for rt in red_teams:
-            a = Alliance(matchid=key, teamid=rt, color="Red")
-            if not self.check_if_alliance_exists(key,rt,"Red"):
-                self.session.add(a)
-        for bt in blue_teams:
-            a = Alliance(matchid=key, teamid=bt, color="Blue")
-            if not self.check_if_alliance_exists(key,bt,"Blue"):
-                self.session.add(a)
-
-    def get_alliance(self, match_key=None, alliance=None, teamid=None, type_df=True):
-        query = self.session.query(Alliance)
-
-        if match_key is not None:
-            query = query.filter(Alliance.matchid == match_key)
-
-        if alliance is not None:
-            query = query.filter(Alliance.color == alliance)
-
-        if teamid is not None:
-            query = query.filter(Alliance.teamid == teamid)
-
-        if type_df:
-            return pd.read_sql_query(query.statement, self.sql_connection())
-        else:
-            return query[:]
-
-    def get_calculated_team_data(self, teamid, type_df=True):
-        query = self.session.query(self.CalculatedTeamDataObject).filter(self.CalculatedTeamDataObject.teamid == teamid)
-
-        if type_df:
-            return pd.read_sql_query(query.statement, self.sql_connection())
-        else:
-            return query[:]
-
-    def add_team(self, id: str):
+    def get_scouts(
+        self,
+        scout_id: Optional[str] = None,
+        active: Optional[bool] = None,
+    ) -> Optional[List[Scout]]:
         """
-
-        Adds a Team to the Database if it doesn't already exist.
-
-        :param id: Team ID
-        :type id: str
-        :rtype: None
+        Get a warning by id
         """
-        if self.check_if_team_exists(id):
-            self.log.warning("Team already exists. It will not be added.")
-            return
+        query = self.session.query(Scout)
+        if id:
+            query = query.filter(Scout.id == scout_id)
+        if active:
+            query = query.filter(Scout.active == active)
 
-        m = Teams(id=id)
+        return query.all() if query is not None else None
 
-        self.session.add(m)
-        self.session.commit()
-
-    def add_team_data(self, id: str, match_key: str, data):
+    def get_predictions(
+        self,
+        scout_id: Optional[str] = None,
+        match_id: Optional[str] = None,
+    ) -> Optional[List[Prediction]]:
         """
-
-        Adds a TeamData Object to the database if it doesn't already exist.
-
-        :param id: Team ID
-        :type id: str
-        :param match_key: Match Key
-        :type match_key: str
-        :param data: A pandas Series of data
-        :type data: pandas.Series
-        :rtype: None
+        Get a warning by id
         """
-        if self.check_if_team_data_exists(id, match_key):
-            self.log.warning("Team already exists. It will not be added.")
-            return
+        query = self.session.query(Prediction)
+        if scout_id:
+            query = query.filter(Prediction.scout_id == scout_id)
+        if match_id:
+            query = query.filter(Prediction.match_id == match_id)
 
-        m = self.TeamDataObject(teamid=id, **data.to_dict())
+        return query.all() if query is not None else None
 
-        self.session.add(m)
-
-    def add_calculated_team_data(self, id: str, data):
+    def get_match_datum(
+        self,
+        match_id: Optional[str] = None,
+    ) -> Optional[MatchDatum]:
         """
-
-        Adds a CalculatedTeamData Object to the database if it doesn't already exist.
-
-        :param id: Team ID
-        :type id: str
-        :param data: A pandas Series of calculated data.
-        :type data: pandas.Series
-        :rtype: None
+        Get a match by id
         """
-        if self.check_if_calculated_team_data_exists(id):
-            self.log.warning("CalculatedTeamData already exists. It will not be added.")
-            return
+        query = (
+            self.session.query(MatchDatum)
+            .filter(MatchDatum.match_id == match_id)
+            .first()
+        )
 
-        m = self.CalculatedTeamDataObject(teamid=id, **data.to_dict())
+        return query
 
-        self.session.add(m)
-    
-    def add_scout(self, name):
-        if self.check_if_scout_exists(name):
-            self.log.warning("Scout already exists. They will not be added.")
-            return
-        s = Scouts(id=name,points=0,streak=0,active=True)
-        self.session.add(s)
-        self.session.commit()
+    def get_team_data(
+        self,
+        match_id: Optional[str] = None,
+        team_id: Optional[str] = None,
+        alliance: Optional[Alliance] = None,
+        scout_id: Optional[str] = None,
+    ) -> Optional[List[TeamDatum]]:
+        """
+        Get a alliance association by id
+        """
+        query = self.session.query(TeamDatum)
+        if match_id:
+            query = query.filter(TeamDatum.match_id == match_id)
+        if team_id:
+            query = query.filter(TeamDatum.team_id == team_id)
+        if alliance:
+            query = query.filter(TeamDatum.alliance == alliance)
+        if scout_id:
+            query = query.filter(TeamDatum.scout_id == scout_id)
 
-    def check_if_scout_exists(self, name):
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Scouts.id == name)
+        return query.all() if query is not None else None
+
+    def get_calculated_team_data(
+        self,
+        team_id: Optional[str] = None,
+    ) -> Optional[CalculatedTeamDatum]:
+        """
+        Get a alliance association by id
+        """
+        query = (
+            self.session.query(CalculatedTeamDatum)
+            .filter(CalculatedTeamDatum.team_id == team_id)
+            .first()
+        )
+
+        return query
+
+    def add_match(
+        self,
+        id: str,
+        comp_level: CompLevel,
+        set_number: int,
+        match_number: int,
+        event_key: str,
+    ) -> None:
+        if not self.get_match(id):
+            m = Match(
+                id=id,
+                comp_level=CompLevel(comp_level),
+                set_number=set_number,
+                match_number=match_number,
+                event_key=event_key,
             )
-        return ret
-    
-    def add_prediction(self, scout, match, prediction):
-        if self.check_if_prediction_exists(scout, match):
-            self.update_prediction(scout, match, prediction)
-            return
-        p = Predictions(scout=scout, match=match, prediction=prediction)
-        self.session.add(p)
-        self.session.commit()
+            self.session.add(m)
 
-    def get_prediction(self, scout=None, match=None, prediction=None, type_df=True):
-        query = self.session.query(Predictions)
+    def add_team(self, id: str) -> None:
+        if not self.get_team(id):
+            t = Team(id=id)
+            self.session.add(t)
 
-        if scout is not None:
-            query = query.filter(Predictions.scout == scout)
-
-        if match is not None:
-            query = query.filter(Predictions.match == match)
-
-        if prediction is not None:
-            query = query.filter(Predictions.prediction == prediction)
-
-        if type_df:
-            return pd.read_sql_query(query.statement, self.sql_connection())
-        else:
-            return query[:]
-
-    def check_if_prediction_exists(self, scout, match):
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Predictions.scout == scout)
-                .where(Predictions.match == match)
+    def add_warning(
+        self,
+        match_id: str,
+        alliance: Alliance,
+        category: str,
+        content: str,
+        ignore: Union[Boolean, Literal[False]] = False,
+    ) -> None:
+        if not self.get_warnings(match_id, alliance, category):
+            w = Warning(
+                match_id=match_id,
+                alliance=alliance,
+                category=category,
+                content=content,
+                ignore=ignore,
             )
-        return ret
+            self.session.add(w)
 
-    def check_if_alliance_exists(self, match_key, teamid, color):
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Alliance.matchid == match_key)
-                .where(Alliance.teamid == teamid)
-                .where(Alliance.color == color)
+    def add_info(self, id: str, value: str) -> None:
+        if not self.get_info(id):
+            i = Info(id=id, value=value)
+            self.session.add(i)
+
+    def add_scout(
+        self,
+        id: str,
+        active: Optional[Boolean] = None,
+        points: int = 0,
+        streak: int = 0,
+    ) -> None:
+        if not self.get_scouts(id, active):
+            s = Scout(id=id, active=active, points=points, streak=streak)
+            self.session.add(s)
+
+    def add_prediction(
+        self, scout_id: str, match_id: str, prediction: Alliance
+    ) -> None:
+        if not self.get_predictions(scout_id=scout_id, match_id=match_id):
+            p = Prediction(scout_id=scout_id, match_id=match_id, prediction=prediction)
+            self.session.add(p)
+
+    def add_match_datum(
+        self,
+        match_id: str,
+        match_json: dict,
+    ) -> None:
+        check_match = self.get_match(key=match_id)
+        if not check_match:
+            return None
+
+        new_vars = {}
+        md = MatchDatum(match_id=match_id)
+
+        new_vars["comp_level"] = CompLevel(match_json["comp_level"])
+        new_vars["set_number"] = match_json["set_number"]
+        new_vars["match_number"] = match_json["match_number"]
+        new_vars["set_number"] = match_json["set_number"]
+        new_vars["winning_alliance"] = Alliance(match_json["winning_alliance"])
+        new_vars["event_key"] = match_json["event_key"]
+        new_vars["time"] = datetime.fromtimestamp(match_json["time"], pytz.utc)
+        new_vars["actual_time"] = datetime.fromtimestamp(
+            match_json["actual_time"], pytz.utc
+        )
+        new_vars["predicted_time"] = datetime.fromtimestamp(
+            match_json["predicted_time"], pytz.utc
+        )
+        new_vars["post_result_time"] = datetime.fromtimestamp(
+            match_json["post_result_time"], pytz.utc
+        )
+
+        # Dynamically set Year specific items
+        for letter, color in zip(["r", "b"], ["red", "blue"]):
+            for key, value in match_data_map.items():
+                new_vars[f"{letter}_{key}"] = match_json[
+                    f"score_breakdown.{color}.{value}"
+                ]
+
+            md.__dict__.update(new_vars)
+
+        self.session.add(md)
+        self.session.flush()
+
+    def add_team_datum(
+        self,
+        team_id: str,
+        # scout_id: str,
+        match_id: str,
+        alliance: Alliance,
+        driver_station: int,
+        team_datum_json: dict,
+    ) -> None:
+        # if (
+        #    self.get_team(team_id) is None
+        #    or self.get_team_data(match_id=match_id, team_id=team_id, alliance=alliance)
+        #    != []
+        # ):
+        #    return None
+
+        new_vars = {}
+        td = TeamDatum(
+            match_id=match_id,
+            team_id=team_id,
+            alliance=alliance,
+            driver_station=driver_station,
+        )
+
+        new_vars["time"] = datetime.strptime(
+            team_datum_json["Timestamp"], "%m/%d/%Y %H:%M:%S"
+        ).replace(tzinfo=pytz.timezone("America/New_York"))
+
+        if type(team_datum_json["Final Climb Type"]) != Null:
+            new_vars["final_climb_type"] = ClimbType(
+                team_datum_json["Final Climb Type"]
             )
-        return ret
 
-    def update_prediction(self, scout, match, prediction):
-        prediction = self.session.query(Predictions).filter(Predictions.scout == scout).filter(Predictions.match == match)[0]
+        # Dynamically set Year specific items
+        for key, value in team_data_map.items():
+            new_vars[key] = team_datum_json[value]
+
+            td.__dict__.update(new_vars)
+
+        self.session.add(td)
+        self.session.flush()
+
+    def get_all_teams_df(self):
+        return pd.read_sql_query(
+            self.session.query(Team).statement, self.sql_connection()
+        )
+
+    def get_all_team_data_df(self):
+        return pd.read_sql_query(
+            self.session.query(TeamDatum).statement, self.sql_connection()
+        )
+
+    def update_prediction(self, scout_id: str, match_id: str, prediction: Alliance):
+        prediction = self.get_predictions(scout_id, match_id)[0]
         prediction.prediction = prediction
         self.session.commit()
 
-    def get_scouts(self):
-        query = self.session.query(Scouts)
-
-        data = pd.read_sql_query(query.statement, self.sql_connection())
-        return data
-
-    def update_scout(self, name, active=None, points=None, streak=None):
-        query = self.session.query(Scouts)
-
-        query = query.filter(Scouts.id == name)[0]
+    def update_scout(
+        self, scout_id: str, active: bool = None, points: int = None, streak: int = None
+    ):
+        scout = self.get_scouts(scout_id=scout_id)
 
         if active is not None:
-            query.active = active
-        
+            scout.active = active
+
         if points is not None:
-            query.points = points
-        
+            scout.points = points
+
         if streak is not None:
-            query.points = streak
+            scout.points = streak
 
         self.session.commit()
 
     def delete_scout(self, name):
-        query = self.session.query(Scouts).filter(Scouts.id==name)
+        query = self.session.query(Scouts).filter(Scouts.id == name)
         query.delete()
         self.session.commit()
 
     def delete_match(self, match_key):
-        query = self.session.query(self.MatchDataObject).filter(self.MatchDataObject.matchId == match_key)
+        query = self.session.query(self.MatchDataObject).filter(
+            self.MatchDataObject.matchId == match_key
+        )
         query.delete()
         self.session.flush()
         self.session.commit
@@ -341,31 +382,6 @@ class DataAccessor:
             else:
                 scout.streak = 0
         self.session.commit()
-             
-
-    def add_warning(self, category, match, alliance, content, ignore=False):
-        if self.check_if_warning_exists(category, match, alliance, content):
-            self.log.warning("Warning already exists. It will not be added.")
-            return
-        w = Warnings(category=category, match=match, alliance=alliance, content=content, ignore=ignore)
-        self.session.add(w)
-
-    def check_if_warning_exists(self, category, match, alliance, content):
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Warnings.category == category)
-                .where(Warnings.match == match)
-                .where(Warnings.alliance == alliance)
-                .where(Warnings.content == content)
-            )
-        return ret
-    
-    def get_warnings(self):
-        query = self.session.query(Warnings)
-
-        data = pd.read_sql_query(query.statement, self.sql_connection())
-        return data
 
     def update_warning(self, id, ignore):
         query = self.session.query(Warnings)
@@ -381,13 +397,6 @@ class DataAccessor:
         query = self.session.query(Warnings)
         query.delete()
 
-    
-    def add_info(self, id, value):
-        i = Info(id=id, value=value)
-        self.session.add(i)
-        self.session.flush()
-
-
     def update_info(self, id, value):
         query = self.session.query(Info)
 
@@ -396,12 +405,6 @@ class DataAccessor:
         query.value = value
 
         self.session.commit()
-
-    def get_info(self):
-        query = self.session.query(Info)
-
-        data = pd.read_sql_query(query.statement, self.sql_connection())
-        return data
 
     def delete_calculated_team_data(self, team_id=None):
         """
@@ -434,94 +437,6 @@ class DataAccessor:
             query = query.filter(self.TeamDataObject.Match_Key == match_key)
 
         query.delete()
-
-    def check_if_team_data_exists(self, team_id, match_key):
-        """
-
-        Checks if a given teamdata for a team and match exists in the database.
-
-        :param team_id: Team ID
-        :type team_id: str
-        :param match_key: Match Key
-        :type match_key: str
-        :return: Whether the team data exists or not.
-        :rtype: bool
-        """
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(self.TeamDataObject.teamid == team_id)
-                .where(self.TeamDataObject.Match_Key == match_key)
-            )
-        return ret
-
-    def check_if_calculated_team_data_exists(self, team_id):
-        """
-
-        Checks if a given calculated team data for a team exists in the database.
-
-        :param team_id: Team ID
-        :type team_id: str
-        :return: Whether the calculated team data exists or not.
-        :rtype: bool
-        """
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(self.CalculatedTeamDataObject.teamid == team_id)
-            )
-        return ret
-
-    def check_if_match_data_exists(self, match_key, time=None):
-        """
-
-        Checks if a given match data for a match key exists in the database.
-
-        :param match_key: A Match Key
-        :type match_key: str
-        :return: Whether the match data exists or not.
-        :rtype: bool
-        """
-        with self.session.no_autoflush:
-            query = exists().where(self.MatchDataObject.matchId == match_key)
-            if time is not None:
-                query = query.where(self.MatchDataObject.actual_time == time)
-            ((ret,),) = self.session.query(query)
-        return ret
-
-    def check_if_team_exists(self, team_id):
-        """
-
-        Checks if a given team for a team ID exists in the database.
-
-        :param team_id: Team ID
-        :type team_id: str
-        :return: Whether the team exists or not.
-        :rtype: bool
-        """
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Teams.id == team_id)
-            )
-        return ret
-
-    def check_if_match_exists(self, match_key):
-        """
-
-        Checks if a given match for a match key exists in the database.
-
-        :param match_key: A Match Key
-        :type match_key: str
-        :return: Whether the match exists or not.
-        :rtype: bool
-        """
-        with self.session.no_autoflush:
-            ((ret,),) = self.session.query(
-                exists()
-                .where(Matches.id == match_key)
-            )
-        return ret
 
     def sql_connection(self):
         return self.engine.connect()

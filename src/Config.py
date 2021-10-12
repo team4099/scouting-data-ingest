@@ -12,7 +12,6 @@ from terminal import console
 
 
 class Config:
-
     def __init__(self, logger, simulation):
         self.config_dict = None
         self.log = logger
@@ -45,6 +44,7 @@ class Config:
         self.simulator_url = os.getenv("SIM_URL")
         self.db_user = os.getenv("MYSQL_USER")
         self.db_pwd = os.getenv("MYSQL_PASSWORD")
+        self.db_host = os.getenv("MYSQL_HOST")
         self.event = os.getenv("EVENT")
 
         if validate:
@@ -72,11 +72,13 @@ class Config:
                 "You are missing the TBA-Key field. Please check https://github.com/team4099/scouting-data-ingest#tba for more information."
             )
             return False
-        
+
         self.check_internet_connection()
 
         if self.year is None:
-            self.log.error("You are missing the Year field. Please add one in the style shown below.")
+            self.log.error(
+                "You are missing the Year field. Please add one in the style shown below."
+            )
             year_example = """
             {
                 "Year": "2020"
@@ -93,16 +95,14 @@ class Config:
                 "You are missing the Google-Credentials field. Please check https://github.com/team4099/scouting-data-ingest#google-service-account-credentials-file for more information."
             )
             return False
-        elif not os.path.isfile(f'config/{self.google_credentials}'):
+        elif not os.path.isfile(f"config/{self.google_credentials}"):
             self.log.error(
                 "The file listed in the Google-Credentials field does not exist in the config folder. Please place it inside the config folder."
             )
             return False
         else:
             try:
-                gc = gspread.service_account(
-                    f'./config/{self.google_credentials}'
-                )
+                gc = gspread.service_account(f"./config/{self.google_credentials}")
             except ValueError as e:
                 self.log.error(
                     "The file listed in the Google-Credentials Field is improper. See below for details."
@@ -117,7 +117,7 @@ class Config:
             return False
         else:
             try:
-                gc.open(f'{self.spreadsheet}').get_worksheet(0)
+                gc.open(f"{self.spreadsheet}").get_worksheet(0)
             except gspread.exceptions.SpreadsheetNotFound:
                 self.log.error(
                     "The file listed in the Spreadsheets field has not been shared with the service account. Please make sure it is."
@@ -138,7 +138,7 @@ class Config:
 
         try:
             create_engine(
-                f'mysql+pymysql://{self.db_user}:{self.db_pwd}@db/scouting'
+                f"mysql+pymysql://{self.db_user}:{self.db_pwd}@{self.db_host}/scouting"
             )
         except pymysql.err.OperationalError:
             self.log.error(
@@ -151,7 +151,13 @@ class Config:
             )
             return False
 
-        if requests.get(f"https://www.thebluealliance.com/api/v3/event/{self.year}{self.event}", headers={"X-TBA-Auth-Key": self.tba_key}).status_code == 404:
+        if (
+            requests.get(
+                f"https://www.thebluealliance.com/api/v3/event/{self.year}{self.event}",
+                headers={"X-TBA-Auth-Key": self.tba_key},
+            ).status_code
+            == 404
+        ):
             self.log.error(
                 "The event listed in the TBA-Key field is not valid. Please ensure the event key and year are correct."
             )
@@ -165,9 +171,17 @@ class Config:
                 return False
 
             try:
-                simulator_status = requests.get(f"{self.simulator_url}/matches").status_code
-            except (ConnectionRefusedError, urllib3.exceptions.NewConnectionError, requests.exceptions.ConnectionError):
-                self.log.error("The simulator may not be running or it's at a different url than the one provided.")
+                simulator_status = requests.get(
+                    f"{self.simulator_url}/matches"
+                ).status_code
+            except (
+                ConnectionRefusedError,
+                urllib3.exceptions.NewConnectionError,
+                requests.exceptions.ConnectionError,
+            ):
+                self.log.error(
+                    "The simulator may not be running or it's at a different url than the one provided."
+                )
                 return False
 
             if simulator_status == 401:
@@ -183,7 +197,7 @@ class Config:
                 return False
             else:
                 try:
-                    gc.open(f'{self.simulator_spreadsheet}').get_worksheet(0)
+                    gc.open(f"{self.simulator_spreadsheet}").get_worksheet(0)
                 except gspread.exceptions.SpreadsheetNotFound:
                     self.log.error(
                         "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."

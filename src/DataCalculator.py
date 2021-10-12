@@ -43,15 +43,20 @@ class DataCalculator:
         :return: A Dataframe of averages
         :rtype: pandas.DataFrame
         """
-        team_data = self.data_accessor.get_team_data()[['teamid', col]].dropna()
+        team_data = self.data_accessor.get_all_team_data_df().loc[["id", col]].dropna()
         if (len(team_data.index)) > 0:
-            team_data_average = self.team_list.merge(team_data.groupby('teamid').mean(), how='outer', left_on='id',
-                                                     right_index=True)
+            team_data_average = self.team_list.merge(
+                team_data.groupby("team_id").mean(),
+                how="outer",
+                left_on="id",
+                right_index=True,
+            )
         else:
-            team_data_average = self.team_list.merge(team_data, how='outer', left_on='id', right_index=True).drop(
-                columns=['teamid'])
+            team_data_average = self.team_list.merge(
+                team_data, how="outer", left_on="team_id", right_index=True
+            ).drop(columns=["id"])
         team_data_average = team_data_average.rename(columns={col: col + "_avg"})
-        return team_data_average.set_index('id')
+        return team_data_average.set_index("team_id")
 
     def calculate_team_median(self, col):
         """
@@ -63,17 +68,24 @@ class DataCalculator:
         :return: A Dataframe of medians
         :rtype: pandas.DataFrame
         """
-        team_data = self.data_accessor.get_team_data()[['teamid', col]].dropna()
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]].dropna()
         if (len(team_data.index)) > 0:
-            team_data_average = self.team_list.merge(team_data.groupby('teamid').median(), how='outer', left_on='id',
-                                                     right_index=True)
+            team_data_average = self.team_list.merge(
+                team_data.groupby("team_id").median(),
+                how="outer",
+                left_on="id",
+                right_index=True,
+            )
         else:
-            team_data_average = self.team_list.merge(team_data, how='outer', left_on='id', right_index=True).drop(
-                columns=['teamid'])
+            team_data_average = self.team_list.merge(
+                team_data, how="outer", left_on="team_id", right_index=True
+            ).drop(columns=["id"])
         team_data_average = team_data_average.rename(columns={col: col + "_med"})
-        return team_data_average.set_index('id')
+        return team_data_average.set_index("team_id")
 
-    def calculate_team_percentages(self, cols, one_hot_encoded=True, replacements=None, possible_values=None):
+    def calculate_team_percentages(
+        self, cols, one_hot_encoded=True, replacements=None, possible_values=None
+    ):
         """
 
         Calculates percentages by team for a metric.
@@ -91,92 +103,47 @@ class DataCalculator:
         """
         if replacements is None:
             replacements = {}
-        team_data = self.data_accessor.get_team_data()[[*cols, 'teamid']]
+        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "id"]]
         if not one_hot_encoded:
             team_data_encoded = pd.get_dummies(team_data[cols])
-            team_data[team_data_encoded.columns] = team_data_encoded[team_data_encoded.columns]
-            unused_col_names = [f"{col}_{name}" for col in cols for name in possible_values if f"{col}_{name}" not in team_data_encoded.columns]
-            team_data[unused_col_names] = pd.DataFrame(data=0, index=team_data_encoded.index, columns=unused_col_names)
+            team_data[team_data_encoded.columns] = team_data_encoded[
+                team_data_encoded.columns
+            ]
+            unused_col_names = [
+                f"{col}_{name}"
+                for col in cols
+                for name in possible_values
+                if f"{col}_{name}" not in team_data_encoded.columns
+            ]
+            team_data[unused_col_names] = pd.DataFrame(
+                data=0, index=team_data_encoded.index, columns=unused_col_names
+            )
         if replacements is not None:
             for k, v in replacements.items():
                 team_data = team_data.replace(k, v)
-        counts = team_data.dropna().groupby('teamid').mean()
-        team_data_percentages = self.team_list.merge(counts, how='outer', left_on='id', right_index=True)
-        team_data_percentages = team_data_percentages.rename(columns={c: c + "_pct" for c in cols})
-        return team_data_percentages.set_index('id')
+        counts = team_data.dropna().groupby("id").mean()
+        team_data_percentages = self.team_list.merge(
+            counts, how="outer", left_on="id", right_index=True
+        )
+        team_data_percentages = team_data_percentages.rename(
+            columns={c: c + "_pct" for c in cols}
+        )
+        return team_data_percentages.set_index("id")
 
     def calculate_team_percentages_quant(self, cols):
-        team_data = self.data_accessor.get_team_data()[[*cols, 'teamid']]
-        counts = team_data.dropna().groupby('teamid').sum()
+        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "id"]]
+        counts = team_data.dropna().groupby("id").sum()
         counts["Sum"] = counts.sum(axis=1)
         for col in cols:
             counts[f"{col}_pct"] = counts.loc[:, col] / counts["Sum"]
         counts.drop(cols, axis=1)
         return counts
 
-    def calculated_team_data_sql_config(self, df):
-        """
-
-        Configures the database for calculated data.
-
-        :param df: Calculated Team Data
-        :type df: pandas.DataFrame
-        """
-        calc_data_config = {}
-        df = df.reset_index().rename(columns={'id': 'teamid'})
-        df = df.infer_objects()
-
-        for col, dtype in zip(df.columns, df.dtypes):
-            if dtype == numpy.float64:
-                calc_data_config[col] = "Column(Float)"
-            elif dtype == numpy.int64:
-                calc_data_config[col] = "Column(Integer)"
-            elif dtype == numpy.object:
-                if col == "Comments":
-                    calc_data_config[col] = "Column(Text(100))"
-                else:
-                    calc_data_config[col] = "Column(String(100))"
-            elif dtype == numpy.bool:
-                calc_data_config[col] = "Column(Boolean())"
-            else:
-                self.log.warning(
-                    f"{dtype} is not a configured datatype. It will not be used."
-                )
-        t_data = {
-            "__tablename__": f'CalculatedTeamData{self.config.year}',
-            "__table_args__": {"extend_existing": True},
-        }
-
-        calc_data_config['teamid'] = "Column(String(20), primary_key=True)"
-
-        with open("CalculatedTeamData2020.json","w") as f:
-            json.dump(calc_data_config,f)
-
-        calc_data_config = {
-            k: eval(v) for k, v in calc_data_config.items()
-        }
-        self.calculated_team_data_object = type(
-            f'CalculatedTeamData{self.config.year}',
-            (Base,),
-            {**calc_data_config, **t_data},
-        )
-        self.data_accessor.CalculatedTeamDataObject = self.calculated_team_data_object
-        self.session.flush()
-        Base.metadata.tables[f'CalculatedTeamData{self.config.year}'].create(bind=self.engine)
-        self.session.commit()
-        self.sql_configured = True
-
     def team_data_to_sql(self, dfs):
-        self.log.info('Joining Dataframes')
+        self.log.info("Joining Dataframes")
         full_df = dfs[0].join(dfs[1:])
-        if not self.sql_configured:
-            self.log.info('Configuring SQL')
-            self.calculated_team_data_sql_config(full_df)
-            self.log.info('Configured SQL')
-        else:
-            self.data_accessor.delete_calculated_team_data()
 
-        self.log.info('Adding Data')
+        self.log.info("Adding Data")
         full_df = full_df.replace(numpy.nan, null(), regex=True)
         for row in full_df.iterrows():
             self.data_accessor.add_calculated_team_data(row[0], row[1])
@@ -184,16 +151,34 @@ class DataCalculator:
 
     def calculate_opr(self, metric):
         team_lists = self.data_accessor.get_teams_in_match()
-        team_lists.index = team_lists.index.sortlevel(1, ascending=True, sort_remaining=True)[0]
-        team_lists = pd.DataFrame(team_lists).reset_index().rename({"Match_Key": "matchId"}, axis=1)
-        metric_data = self.data_accessor.get_match_data(type_df=True)[[f"score_breakdown.red.{metric}", f"score_breakdown.blue.{metric}", "matchId"]].sort_values(by="matchId")
-        blue_data = metric_data[[f"score_breakdown.blue.{metric}", "matchId"]].rename({f"score_breakdown.blue.{metric}": metric}, axis=1)
-        red_data = metric_data[[f"score_breakdown.red.{metric}", "matchId"]].rename({f"score_breakdown.red.{metric}": metric}, axis=1)
+        team_lists.index = team_lists.index.sortlevel(
+            1, ascending=True, sort_remaining=True
+        )[0]
+        team_lists = (
+            pd.DataFrame(team_lists)
+            .reset_index()
+            .rename({"Match_Key": "matchId"}, axis=1)
+        )
+        metric_data = self.data_accessor.get_match_data(type_df=True)[
+            [
+                f"score_breakdown.red.{metric}",
+                f"score_breakdown.blue.{metric}",
+                "matchId",
+            ]
+        ].sort_values(by="matchId")
+        blue_data = metric_data[[f"score_breakdown.blue.{metric}", "matchId"]].rename(
+            {f"score_breakdown.blue.{metric}": metric}, axis=1
+        )
+        red_data = metric_data[[f"score_breakdown.red.{metric}", "matchId"]].rename(
+            {f"score_breakdown.red.{metric}": metric}, axis=1
+        )
         blue_data["Alliance"] = "Blue"
         red_data["Alliance"] = "Red"
         merged_data = blue_data.append(red_data)
 
-        assembled_data = pd.merge(team_lists, merged_data, on=["matchId", "Alliance"], how="inner")[["teamid", metric]]
+        assembled_data = pd.merge(
+            team_lists, merged_data, on=["matchId", "Alliance"], how="inner"
+        )[["teamid", metric]]
         mlb = MultiLabelBinarizer(sparse_output=True)
         sparse_teams = mlb.fit_transform(assembled_data["teamid"])
         oprs = lsmr(sparse_teams, assembled_data[metric].to_numpy())
@@ -203,52 +188,80 @@ class DataCalculator:
         return teams_with_oprs
 
     def group_notes(self):
-        team_data = self.data_accessor.get_team_data()[['teamid','Match_Key','Notes','Issues']]
-        stripped_match_id = team_data['Match_Key'].apply(lambda x: x[x.index("_")+1:])
-        team_data["Comments"] = "N" + stripped_match_id + ": " + team_data['Notes'] + ", I" + stripped_match_id + ": " + team_data["Issues"] + ", "
+        team_data = self.data_accessor.get_all_team_data_df()[
+            ["team_id", "match_id", "notes", "auto_notes", "teleop_notes"]
+        ]
+        stripped_match_id = team_data["match_id"].apply(lambda x: x[x.index("_") + 1 :])
+        team_data["Comments"] = (
+            "N"
+            + stripped_match_id
+            + ": "
+            + team_data["notes"]
+            + ","
+            + team_data["teleop_notes"]
+            + ", "
+            + team_data["auto_notes"]
+        )
 
-        notes_by_teams = pd.DataFrame(index=team_data['teamid'].unique(), columns=["Comments"])
+        notes_by_teams = pd.DataFrame(
+            index=team_data["team_id"].unique(), columns=["comments"]
+        )
 
-        for team in team_data['teamid'].unique():
-            team_specific_notes = team_data.loc[team_data['teamid'] == team]
-            notes_by_teams.at[team, "Comments"] = team_specific_notes["Comments"].str.join("")
+        for team in team_data["teamid"].unique():
+            team_specific_notes = team_data.loc[team_data["teamid"] == team]
+            notes_by_teams.at[team, "comments"] = team_specific_notes[
+                "Comments"
+            ].str.join("")
 
         return notes_by_teams
 
-
     def calculate_team_data(self):
         """
-            Calculates Team Data
+        Calculates Team Data
         """
         self.log.info("Getting a team list")
-        self.team_list = self.data_accessor.get_teams()
+        self.team_list = self.data_accessor.get_all_teams_df()
 
         self.log.info("Calculating averages")
-        auto_low_avg = self.calculate_team_average("Auto_Low_Goal")
-        auto_high_avg = self.calculate_team_average("Auto_High_Goal")
-        tele_low_avg = self.calculate_team_average("Teleop_Low_Goal")
-        tele_high_avg = self.calculate_team_average("Teleop_High_Goal")
-        tele_miss_avg = self.calculate_team_average("Teleop_Misses")
-        fouls_avg = self.calculate_team_average("Fouls")
-        climb_time_avg = self.calculate_team_average("Climb_Time")
+        auto_low_avg = self.calculate_team_average("auto_low_goal")
+        auto_high_avg = self.calculate_team_average("auto_high_hoal")
+        auto_miss_avg = self.calculate_team_average("auto_misses")
+        tele_miss_avg = self.calculate_team_average("teleop_misses")
+        tele_low_avg = self.calculate_team_average("teleop_low_goal")
+        tele_high_avg = self.calculate_team_average("teleop_high_goal")
+        tele_miss_avg = self.calculate_team_average("teleop_misses")
+        fouls_avg = self.calculate_team_average("fouls")
+        climb_time_avg = self.calculate_team_average("climb_time")
 
         self.log.info("Calculating medians")
-        auto_low_med = self.calculate_team_median("Auto_Low_Goal")
-        auto_high_med = self.calculate_team_median("Auto_High_Goal")
-        tele_low_med = self.calculate_team_median("Teleop_Low_Goal")
-        tele_high_med = self.calculate_team_median("Teleop_High_Goal")
-        tele_miss_med = self.calculate_team_median("Teleop_Misses")
-        fouls_med = self.calculate_team_median("Fouls")
-        climb_time_med = self.calculate_team_median("Climb_Time")
+        auto_low_med = self.calculate_team_median("auto_low_goal")
+        auto_high_med = self.calculate_team_median("auto_high_goal")
+        tele_low_med = self.calculate_team_median("teleop_low_goal")
+        tele_high_med = self.calculate_team_median("teleop_high_goal")
+        tele_miss_med = self.calculate_team_median("teleop_misses")
+        fouls_med = self.calculate_team_median("fouls")
+        climb_time_med = self.calculate_team_median("climb_time")
 
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
-            ['Target_Zone?', 'Initiation_Line?', 'Near_Trench?', 'Rendezvous_point?', 'Far_Trench'],
-            replacements={"Yes": 1, "No": 0})
-        climb_type_pct = self.calculate_team_percentages(['Climb_Type'], one_hot_encoded=False, possible_values=['Hang', 'Park', 'No_Climb'])
-        shoot_pct = self.calculate_team_percentages_quant(['Teleop_High_Goal', 'Teleop_Low_Goal', 'Teleop_Misses'])
+            [
+                "Target_Zone?",
+                "Initiation_Line?",
+                "Near_Trench?",
+                "Rendezvous_point?",
+                "Far_Trench",
+            ],
+            replacements={"Yes": 1, "No": 0},
+        )
+        climb_type_pct = self.calculate_team_percentages(
+            ["Climb_Type"],
+            one_hot_encoded=False,
+            possible_values=["Hang", "Park", "No_Climb"],
+        )
+        shoot_pct = self.calculate_team_percentages_quant(
+            ["Teleop_High_Goal", "Teleop_Low_Goal", "Teleop_Misses"]
+        )
 
-        oprs = self.calculate_opr("totalPoints")
         comments = self.group_notes()
 
         self.log.info("Adding data to SQL")
@@ -272,7 +285,7 @@ class DataCalculator:
                 climb_type_pct,
                 shoot_pct,
                 oprs,
-                comments
+                comments,
             ]
         )
         # Consistency scores
