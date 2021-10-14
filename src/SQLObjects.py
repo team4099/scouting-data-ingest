@@ -315,7 +315,7 @@ class CalculatedTeamDatum(Base):
     teleop_low_pct = Column(Float)
     teleop_miss_pct = Column(Float)
 
-    comments = Columns(String)
+    comments = Column(Text)
 
 
 def flatten_json(json):
@@ -381,8 +381,8 @@ team_data_map = {
     "from_initiation_line": "Initiation Line?",
     "from_target_zone": "Target Zone?",
     "from_near_trench": "Near Trench?",
-    "from_far_trench": "Rendezvous point?",
-    "from_rendezvous": "Far Trench",
+    "from_far_trench": "Far Trench",
+    "from_rendezvous_point": "Rendezvous point?",
     "climb_time": "Climb Time",
     "attempted_park": "Attempted Park",
     "attempted_hang": "Attempted Hang",

@@ -23,7 +23,8 @@ services:
         volumes:
             - ./src/:/code
         environment:
-            MYSQL_HOST: scouting-data-ingest-test.ccjho2z8otts.us-east-2.rds.amazonaws.com
+            # MYSQL_HOST: scouting-data-ingest-test.ccjho2z8otts.us-east-2.rds.amazonaws.com
+            MYSQL_HOST: db
             MYSQL_USER: root
             MYSQL_PASSWORD: testinginstance
             # Replace [Key] in the following line with your TBA Key

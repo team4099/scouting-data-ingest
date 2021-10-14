@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Match Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.css">
+    <link rel="stylesheet" href="http://0.0.0.0:5001/static/switch.min.css">
+    <link rel="stylesheet" href="http://0.0.0.0:5001/static/slider.min.css">
+    <script type="text/javascript" src="http://0.0.0.0:5001/static/slider.min.js"></script>
+  </head>
+  <body>
+    <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+      <div class="navbar-brand">
+        <a class="navbar-item" href="https://bulma.io">
+          <strong>Chief</strong>
+        </a>
+
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div id="navbarMenu" class="navbar-menu">
+        <div class="navbar-start">
+          <a class="navbar-item">
+            Dashboard
+          </a>
+
+          <a class="navbar-item">
+            Form
+          </a>
+
+          <a class="navbar-item">
+            Teams
+          </a>
+
+          <a class="navbar-item">
+            Match
+          </a>
+
+          <a class="navbar-item">
+            Scouts
+          </a>
+
+        </div>
+
+        <div class="navbar-end">
+          <div class="navbar-item">
+            <div class="buttons">
+              <a class="button is-primary">
+                <strong>Log in</strong>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <section class="section">
+      <div class="container">
+        <form id="submitForm">
+          <div class="box">
+            <p class="has-text-centered is-size-4 mb-4 has-text-dark">Info</p>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Scout ID</label>
+              <div class="control">
+                <input type="text" id="scout-id" class="input"></input>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Match Key</label>
+              <div class="field has-addons">
+                <div class="control">
+                  <div class="select">
+                    <select id="match-key-category">
+                      <option value="qm">qm</option>
+                      <option value="qf">qf</option>
+                      <option value="sf">sf</option>
+                      <option value="f">f</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="control">
+                  <input type="number" id="match-key-number" class="input"></input>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Team Number</label>
+              <div class="control">
+                <input type="text" id="team-number" class="input"></input>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Alliance</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="alliance">
+                    <option value="red">Red</option>
+                    <option value="blue">Blue</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Driver Station</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="driver-station">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+
+          <div class="box">
+            <p class="has-text-centered is-size-4 mb-4 has-text-dark">Autonomous Period</p>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Auto Low Goal</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="auto-low-goal" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="auto-low-goal" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="auto-low-goal" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Auto High Goal</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="auto-high-goal" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="auto-high-goal" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="auto-high-goal" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Auto Misses</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="auto-misses" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="auto-misses" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="auto-misses" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Auto Notes</label>
+              <div class="control">
+                <textarea id="auto-notes" class="textarea"></textarea>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="box">
+            <p class="has-text-centered is-size-4 mb-4 has-text-dark">Teleoperated Period</p>
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Teleop Low Goal</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="teleop-low-goal" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="teleop-low-goal" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="teleop-low-goal" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Teleop High Goal</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="teleop-high-goal" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="teleop-high-goal" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="teleop-high-goal" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Teleop Misses</label>
+              <div class="control">
+                <div class="field is-grouped">
+                  <div class="control is-expanded">
+                    <button data-control="teleop-misses" onclick="decrement(this)" class="button has-background-danger is-fullwidth" type="button">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+                  <div class="control numControl">
+                    <input id="teleop-misses" class="input" type="number" placeholder="0" min="0" max="40">
+                  </div>
+                  <div class="control is-expanded">
+                    <button data-control="teleop-misses" onclick="increment(this)" class="button has-background-success is-fullwidth" type="button">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Control Panel</label>
+              <div class="select">
+                <select id="control-panel">
+                  <option value="0">Did not use</option>
+                  <option value="1">Level 1 Completed</option>
+                  <option value="2">Level 2 Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Shooting Zones</label>
+              <div class="select is-multiple is-fullwidth">
+                <select id="shooting-zones" multiple>
+                  <option>Far Trench</option>
+                  <option>Near Trench</option>
+                  <option>Target Zone</option>
+                  <option>Initiation Line</option>
+                  <option>Rendezvous Point</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Teleop Notes</label>
+              <div class="control">
+                <textarea id="teleop-notes" class="textarea"></textarea>
+              </div>
+            </div>
+
+
+          </div>
+
+          <div class="box">
+            <p class="has-text-centered is-size-4 mb-4 has-text-dark">Endgame</p>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Endgame Climb Time</label>
+              <div class="control">
+                <input id="climb-time" class="slider has-output is-fullwidth" step="1" min="1" max="6" value="1" type="range">
+                <output for="climb-time">1</output>
+              </div>
+              <p class="help">1 is less than 5 seconds, 2 is between 5 and 10, 3 is between 10 and 15, 4 is between 15 and 20, 5 is between 20 and 25, and 6 is between 25 and 3</p>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Attempted Climb?</label>
+              <div class="control has-text-centered mb-4">
+                <input id="attempted-park" type="checkbox" name="attempted-park" class="switch is-rtl">
+                <label for="attempted-park">Attempted Park?</label>
+              </div>
+              <div class="control has-text-centered">
+                <input id="attempted-hang" type="checkbox" name="attempted-hang" class="switch is-rtl">
+                <label for="attempted-hang">Attempted Hang?</label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Final Climb Type</label>
+              <div class="select is-fullwidth">
+                <select id="final-climb-type">
+                  <option>No Climb</option>
+                  <option>Park</option>
+                  <option>Hang</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="box">
+            <p class="has-text-centered is-size-4 mb-4 has-text-dark">Miscellaneous</p>
+
+            <div class="field">
+              <label class="label has-text-centered is-size-5">Notes</label>
+              <div class="control">
+                <textarea id="notes" class="textarea"></textarea>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="field has-text-centered mb-4">
+            <button class="button is-info" onclick="submit()">Submit</button>
+          </div>
+          <div class="field has-text-centered mb-4">
+            <button class="button is-danger" onclick="document.getElementById('submitForm').reset()">Reset</button>
+          </div>
+          </form>
+      </div>
+    </section>
+  </body>
+</html>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+
+      // Get all "navbar-burger" elements
+      const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+      // Check if there are any navbar burgers
+      if ($navbarBurgers.length > 0) {
+
+          // Add a click event on each of them
+          $navbarBurgers.forEach( el => {
+              el.addEventListener('click', () => {
+
+                  // Get the target from the "data-target" attribute
+                  const target = el.dataset.target;
+                  const $target = document.getElementById(target);
+
+                  // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+                  el.classList.toggle('is-active');
+                  $target.classList.toggle('is-active');
+
+              });
+          });
+      }
+
+  });
+</script>
+
+<script>
+  bulmaSlider.attach();
+
+  function increment(e){
+      e = e || window.event;
+      var inp = document.querySelector("#" + e.dataset.control);
+      var value = parseInt(inp.value, 10);
+      value = isNaN(value) ? 0 : value;
+      value = value > inp.max - 1 ? inp.max: value + 1;
+      inp.value = value;
+  }
+  function decrement(e){
+      e = e || window.event;
+      var inp = document.querySelector("#" + e.dataset.control);
+      var value = parseInt(inp.value, 10);
+      value = isNaN(value) ? 0 : value;
+      value = value < 1 ? 0: value - 1;
+      inp.value = value;
+  }
+
+  function submit(e){
+      e = e || window.event;
+      e.target.className = "button is-info is-loading";
+
+      var data = {};
+
+      data["scout_id"] = document.getElementById("scout-id").value;
+      data["match_key"] = document.getElementById("match-key-category").value + document.getElementById("match-key-number").value;
+      data["team_number"] = document.getElementById("team-number").value;
+      data["alliance"] = document.getElementById("alliance").value;
+      data["driver_station"] = document.getElementById("driver-station").value;
+
+      data["auto_low_goal"] = document.getElementById("auto-low-goal").value;
+      data["auto_high_goal"] = document.getElementById("auto-high-goal").value;
+      data["auto_misses"] = document.getElementById("auto-misses").value;
+      data["auto_notes"] = document.getElementById("auto-notes").value;
+
+      data["teleop_low_goal"] = document.getElementById("teleop-low-goal").value;
+      data["teleop_high_goal"] = document.getElementById("teleop-high-goal").value;
+      data["teleop_misses"] = document.getElementById("teleop-misses").value;
+      data["control_panel"] = document.getElementById("control-panel").value;
+      data["shooting_zones"] = [...document.getElementById("shooting-zones").options].filter(option => option.selected).map(option => option.value)
+      data["teleop_notes"] = document.getElementById("teleop-notes").value;
+
+      data["climb-time"] = document.getElementById("climb-time").value;
+      data["attempted_park"] = document.getElementById("attempted-park").checked;
+      data["attempted_hang"] = document.getElementById("attempted-hang").checked;
+      data["final_climb_type"] = document.getElementById("final-climb-type").value;
+      
+      data["notes"] = document.getElementById("notes").value;
+
+      console.log(data);
+      e.target.className = "button is-success";
+  }
+</script>
+
+
+<style>
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+      -moz-appearance: textfield;
+  }
+
+
+
+  @media screen and (max-width: 768px) {
+      .numControl {
+          width: 35%;
+      }
+
+</style>

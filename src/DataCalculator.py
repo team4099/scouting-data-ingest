@@ -5,7 +5,7 @@ from scipy.sparse.linalg import lsmr
 from sklearn.preprocessing import MultiLabelBinarizer
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, null
 
-from SQLObjects import Base
+from SQLObjects import Base, ClimbType
 from terminal import logger
 
 
@@ -43,7 +43,7 @@ class DataCalculator:
         :return: A Dataframe of averages
         :rtype: pandas.DataFrame
         """
-        team_data = self.data_accessor.get_all_team_data_df().loc[["id", col]].dropna()
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]].dropna()
         if (len(team_data.index)) > 0:
             team_data_average = self.team_list.merge(
                 team_data.groupby("team_id").mean(),
@@ -56,7 +56,7 @@ class DataCalculator:
                 team_data, how="outer", left_on="team_id", right_index=True
             ).drop(columns=["id"])
         team_data_average = team_data_average.rename(columns={col: col + "_avg"})
-        return team_data_average.set_index("team_id")
+        return team_data_average.set_index("id")
 
     def calculate_team_median(self, col):
         """
@@ -81,7 +81,7 @@ class DataCalculator:
                 team_data, how="outer", left_on="team_id", right_index=True
             ).drop(columns=["id"])
         team_data_average = team_data_average.rename(columns={col: col + "_med"})
-        return team_data_average.set_index("team_id")
+        return team_data_average.set_index("id")
 
     def calculate_team_percentages(
         self, cols, one_hot_encoded=True, replacements=None, possible_values=None
@@ -103,7 +103,7 @@ class DataCalculator:
         """
         if replacements is None:
             replacements = {}
-        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "id"]]
+        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "team_id"]]
         if not one_hot_encoded:
             team_data_encoded = pd.get_dummies(team_data[cols])
             team_data[team_data_encoded.columns] = team_data_encoded[
@@ -121,7 +121,7 @@ class DataCalculator:
         if replacements is not None:
             for k, v in replacements.items():
                 team_data = team_data.replace(k, v)
-        counts = team_data.dropna().groupby("id").mean()
+        counts = team_data.dropna().groupby("team_id").mean()
         team_data_percentages = self.team_list.merge(
             counts, how="outer", left_on="id", right_index=True
         )
@@ -131,22 +131,24 @@ class DataCalculator:
         return team_data_percentages.set_index("id")
 
     def calculate_team_percentages_quant(self, cols):
-        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "id"]]
-        counts = team_data.dropna().groupby("id").sum()
+        team_data = self.data_accessor.get_all_team_data_df()[[*cols, "team_id"]]
+        counts = team_data.dropna().groupby("team_id").sum()
         counts["Sum"] = counts.sum(axis=1)
         for col in cols:
             counts[f"{col}_pct"] = counts.loc[:, col] / counts["Sum"]
-        counts.drop(cols, axis=1)
+        cols.append("Sum")
+        counts.drop(cols, axis=1, inplace=True)
         return counts
 
-    def team_data_to_sql(self, dfs):
+    def team_data_to_sql(self, dfs, col_names):
         self.log.info("Joining Dataframes")
         full_df = dfs[0].join(dfs[1:])
+        full_df.rename(col_names, inplace=True, axis=1)
 
         self.log.info("Adding Data")
         full_df = full_df.replace(numpy.nan, null(), regex=True)
-        for row in full_df.iterrows():
-            self.data_accessor.add_calculated_team_data(row[0], row[1])
+        for team, calculated_team_datum in full_df.to_dict(orient="index").items():
+            self.data_accessor.add_calculated_team_datum(team, calculated_team_datum)
         self.session.commit()
 
     def calculate_opr(self, metric):
@@ -192,26 +194,26 @@ class DataCalculator:
             ["team_id", "match_id", "notes", "auto_notes", "teleop_notes"]
         ]
         stripped_match_id = team_data["match_id"].apply(lambda x: x[x.index("_") + 1 :])
-        team_data["Comments"] = (
+        team_data["comments"] = (
             "N"
             + stripped_match_id
             + ": "
-            + team_data["notes"]
+            + team_data["notes"].astype(str)
             + ","
-            + team_data["teleop_notes"]
+            + team_data["teleop_notes"].astype(str)
             + ", "
-            + team_data["auto_notes"]
+            + team_data["auto_notes"].astype(str)
         )
 
         notes_by_teams = pd.DataFrame(
             index=team_data["team_id"].unique(), columns=["comments"]
         )
 
-        for team in team_data["teamid"].unique():
-            team_specific_notes = team_data.loc[team_data["teamid"] == team]
-            notes_by_teams.at[team, "comments"] = team_specific_notes[
-                "Comments"
-            ].str.join("")
+        for team in team_data["team_id"].unique():
+            team_specific_notes = team_data.loc[team_data["team_id"] == team]
+            notes_by_teams.at[team, "comments"] = "".join(
+                team_specific_notes["comments"]
+            )
 
         return notes_by_teams
 
@@ -224,42 +226,40 @@ class DataCalculator:
 
         self.log.info("Calculating averages")
         auto_low_avg = self.calculate_team_average("auto_low_goal")
-        auto_high_avg = self.calculate_team_average("auto_high_hoal")
-        auto_miss_avg = self.calculate_team_average("auto_misses")
-        tele_miss_avg = self.calculate_team_average("teleop_misses")
+        auto_high_avg = self.calculate_team_average("auto_high_goal")
+        # auto_miss_avg = self.calculate_team_average("auto_misses")
         tele_low_avg = self.calculate_team_average("teleop_low_goal")
         tele_high_avg = self.calculate_team_average("teleop_high_goal")
         tele_miss_avg = self.calculate_team_average("teleop_misses")
-        fouls_avg = self.calculate_team_average("fouls")
         climb_time_avg = self.calculate_team_average("climb_time")
 
         self.log.info("Calculating medians")
         auto_low_med = self.calculate_team_median("auto_low_goal")
         auto_high_med = self.calculate_team_median("auto_high_goal")
+        # auto_miss_med = self.calculate_team_median("auto_misses")
         tele_low_med = self.calculate_team_median("teleop_low_goal")
         tele_high_med = self.calculate_team_median("teleop_high_goal")
         tele_miss_med = self.calculate_team_median("teleop_misses")
-        fouls_med = self.calculate_team_median("fouls")
         climb_time_med = self.calculate_team_median("climb_time")
 
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
             [
-                "Target_Zone?",
-                "Initiation_Line?",
-                "Near_Trench?",
-                "Rendezvous_point?",
-                "Far_Trench",
+                "from_target_zone",
+                "from_initiation_line",
+                "from_near_trench",
+                "from_far_trench",
+                "from_rendezvous_point",
             ],
-            replacements={"Yes": 1, "No": 0},
+            replacements={True: 1, False: 0},
         )
         climb_type_pct = self.calculate_team_percentages(
-            ["Climb_Type"],
+            ["final_climb_type"],
             one_hot_encoded=False,
-            possible_values=["Hang", "Park", "No_Climb"],
+            possible_values=[ClimbType.hang, ClimbType.park, ClimbType.no_climb],
         )
         shoot_pct = self.calculate_team_percentages_quant(
-            ["Teleop_High_Goal", "Teleop_Low_Goal", "Teleop_Misses"]
+            ["teleop_high_goal", "teleop_low_goal", "teleop_misses"]
         )
 
         comments = self.group_notes()
@@ -269,24 +269,35 @@ class DataCalculator:
             [
                 auto_low_avg,
                 auto_high_avg,
+                # auto_miss_avg,
                 tele_low_avg,
                 tele_high_avg,
                 tele_miss_avg,
-                fouls_avg,
                 climb_time_avg,
                 auto_low_med,
                 auto_high_med,
                 tele_low_med,
                 tele_high_med,
                 tele_miss_med,
-                fouls_med,
                 climb_time_med,
                 shooting_zone_pct,
                 climb_type_pct,
                 shoot_pct,
-                oprs,
                 comments,
-            ]
+            ],
+            {
+                "from_target_zone_pct": "from_target_zone_usage",
+                "from_initiation_line_pct": "from_initiation_line_usage",
+                "from_near_trench_pct": "from_near_trench_usage",
+                "from_far_trench_pct": "from_far_trench_usage",
+                "from_rendezvous_point_pct": "from_rendezvous_point_usage",
+                "final_climb_type_ClimbType.hang": "hang_pct",
+                "final_climb_type_ClimbType.park": "park_pct",
+                "final_climb_type_ClimbType.no_climb": "no_climb_pct",
+                "teleop_high_goal_pct": "teleop_high_pct",
+                "teleop_low_goal_pct": "teleop_low_pct",
+                "teleop_misses_pct": "teleop_miss_pct",
+            },
         )
         # Consistency scores
         # ELO

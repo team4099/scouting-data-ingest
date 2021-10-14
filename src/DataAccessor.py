@@ -326,6 +326,34 @@ class DataAccessor:
         self.session.add(td)
         self.session.flush()
 
+    def add_calculated_team_datum(self, team_id: str, calculated_team_datum_json: dict):
+        if self.get_team(team_id) is None:
+            return None
+        if (old_team_data := self.get_calculated_team_data(team_id)) is not None:
+            new_vars = old_team_data.__dict__
+            # Dynamically set Year specific items
+            for key, value in calculated_team_datum_json.items():
+                if type(value) == Null or value != new_vars[key]:
+                    new_vars[key] = value
+
+            old_team_data.__dict__.update(new_vars)
+
+            self.session.commit()
+        else:
+            new_vars = {}
+            ctd = CalculatedTeamDatum(
+                team_id=team_id,
+            )
+
+            # Dynamically set Year specific items
+            for key, value in calculated_team_datum_json.items():
+                new_vars[key] = value
+
+            ctd.__dict__.update(new_vars)
+
+            self.session.add(ctd)
+            self.session.flush()
+
     def get_all_teams_df(self):
         return pd.read_sql_query(
             self.session.query(Team).statement, self.sql_connection()

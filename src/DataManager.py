@@ -108,7 +108,7 @@ class DataManager:
         """
         self.data_accessor.update_info("Status", "Running")
         self.get_data()
-        self.check_data()
+        # self.check_data()
         self.calculate_data()
         self.data_accessor.update_info("Task", "Waiting")
         self.data_accessor.update_info("Status", "Finished")

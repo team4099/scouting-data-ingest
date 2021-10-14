@@ -37,6 +37,7 @@ class Config:
         self.config_dict = config
 
         self.tba_key = os.getenv("TBA_KEY")
+        self.use_tba = os.getenv("USE_TBA")
         self.year = os.getenv("YEAR")
         self.google_credentials = os.getenv("G_CRED")
         self.spreadsheet = os.getenv("G_SHEET")
