@@ -62,6 +62,7 @@ class DataInput:
         self.tba_last_modified = "Wed, 1 Jan 1000 00:00:01 GMT"
         self.sheet_last_modified = None
         self.last_tba_time = 0
+        self.last_tba_match = None
 
         # Object to represent worksheet
         gc = gspread.service_account(f"./config/{self.config.google_credentials}")
@@ -153,14 +154,13 @@ class DataInput:
         data["Match Key"] = (
             self.config.year + self.config.event + "_" + data["Match Key"].astype(str)
         )
-        data["Final Climb Type"] = data["Final Climb Type"].str.lower()
+        #data["Climb Type"] = data["Climb Type"].str.lower()
         # Get rid of empty cells/ and spaces with dropna and then use SQLAlchemy null() for it to show as null in mySQL
         data = data.replace(r"^\s*$", numpy.nan, regex=True)
         data = data.replace("Yes", 1)
         data = data.replace("No", 0)
         data.astype(data.dropna().infer_objects().dtypes)
         data = data.replace(numpy.nan, null(), regex=True)
-        print(data["Final Climb Type"])
 
         # If the sheet hasn't been modified, do nothing
         if (

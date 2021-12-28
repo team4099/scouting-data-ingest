@@ -384,8 +384,8 @@ team_data_map = {
     "from_far_trench": "Far Trench",
     "from_rendezvous_point": "Rendezvous point?",
     "climb_time": "Climb Time",
-    "attempted_park": "Attempted Park",
-    "attempted_hang": "Attempted Hang",
+    #"attempted_park": "Attempted Park",
+    "attempted_hang": "Climb Attempted",
     # "final_climb_type": "Final Climb Type",
     "notes": "Notes",
 }

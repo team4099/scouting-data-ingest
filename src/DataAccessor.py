@@ -49,7 +49,48 @@ class DataAccessor:
 
         self.log.info("DataAccessor Loaded!")
 
-    def get_match(self, key: str) -> Optional[Match]:
+    def get_all_alliances(
+        self,
+    ) -> Optional[List[Team]]:
+        """
+        Get all teams in a given alliance from a certain match
+        
+        """
+        
+        query = "SELECT teamid, matchid, color FROM alliances;"
+        return list(self.session.execute(query).fetchall())
+    
+    def get_all_data_for_a_metric(
+        self,
+        metric: str
+    ) -> Optional[List[MatchDatum]]:
+        """
+        
+        Get all data for a specific metric for both red and blue alliances
+
+        """
+        query = f"SELECT match_id, r_{metric}, b_{metric} FROM match_data;"
+        metricdata = list(self.session.execute(query).fetchall())
+        hashoutput = {}
+        for matchinfo in metricdata:
+            hashoutput[matchinfo[0]] = (matchinfo[1], matchinfo[2])
+        return hashoutput
+        
+    def get_all_matches(
+        self,
+    ) -> Optional[List[Match]]:
+        """
+        
+        Get all match ids
+
+        """
+        query = "SELECT match_id from match_data;"
+        return [match[0] for match in list(self.session.execute(query).fetchall()) if len(match) > 0]
+
+    def get_match(
+        self,
+        key: str
+    ) -> Optional[Match]:
         """
         Get a match by id
         """
@@ -187,7 +228,7 @@ class DataAccessor:
         match_number: int,
         event_key: str,
     ) -> None:
-        if not self.get_match(id):
+        if not self.get_match(key=id):
             m = Match(
                 id=id,
                 comp_level=CompLevel(comp_level),
@@ -312,10 +353,10 @@ class DataAccessor:
             team_datum_json["Timestamp"], "%m/%d/%Y %H:%M:%S"
         ).replace(tzinfo=pytz.timezone("America/New_York"))
 
-        if type(team_datum_json["Final Climb Type"]) != Null:
-            new_vars["final_climb_type"] = ClimbType(
-                team_datum_json["Final Climb Type"]
-            )
+        #if type(team_datum_json["Climb Type"]) != Null:
+        #    new_vars["final_climb_type"] = ClimbType(
+        #        team_datum_json["Climb Type"]
+        #    )
 
         # Dynamically set Year specific items
         for key, value in team_data_map.items():
@@ -358,6 +399,7 @@ class DataAccessor:
         return pd.read_sql_query(
             self.session.query(Team).statement, self.sql_connection()
         )
+    
 
     def get_all_team_data_df(self):
         return pd.read_sql_query(

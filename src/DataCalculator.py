@@ -152,41 +152,59 @@ class DataCalculator:
         self.session.commit()
 
     def calculate_opr(self, metric):
-        team_lists = self.data_accessor.get_teams_in_match()
-        team_lists.index = team_lists.index.sortlevel(
-            1, ascending=True, sort_remaining=True
-        )[0]
-        team_lists = (
-            pd.DataFrame(team_lists)
-            .reset_index()
-            .rename({"Match_Key": "matchId"}, axis=1)
-        )
-        metric_data = self.data_accessor.get_match_data(type_df=True)[
-            [
-                f"score_breakdown.red.{metric}",
-                f"score_breakdown.blue.{metric}",
-                "matchId",
-            ]
-        ].sort_values(by="matchId")
-        blue_data = metric_data[[f"score_breakdown.blue.{metric}", "matchId"]].rename(
-            {f"score_breakdown.blue.{metric}": metric}, axis=1
-        )
-        red_data = metric_data[[f"score_breakdown.red.{metric}", "matchId"]].rename(
-            {f"score_breakdown.red.{metric}": metric}, axis=1
-        )
-        blue_data["Alliance"] = "Blue"
-        red_data["Alliance"] = "Red"
-        merged_data = blue_data.append(red_data)
-
-        assembled_data = pd.merge(
-            team_lists, merged_data, on=["matchId", "Alliance"], how="inner"
-        )[["teamid", metric]]
+        #team_lists = self.data_accessor.get_teams_in_match()
+        # team_lists = self.data_accessor.get_all_teams_df()
+        # team_lists.index = team_lists.index.sortlevel(
+        #     1, ascending=True, sort_remaining=True
+        # )[0]
+        # team_lists = (
+        #     pd.DataFrame(team_lists)
+        #     .reset_index()
+        #     .rename({"Match_Key": "matchId"}, axis=1)
+        # )
+        # metric_data = self.data_accessor.get_match(type_df=True)[
+        #     [
+        #         f"r_{metric}",
+        #         f"b_{metric}",
+        #         "match_id"
+        #     ]
+        # ].sort_values(by="match_id")
+        # blue_data = metric_data[[f"b_{metric}", "match_id"]].rename(
+        #     {f"b_{metric}": metric}, axis=1
+        # )
+        # red_data = metric_data[[f"r_{metric}", "match_id"]].rename(
+        #     {f"r_{metric}": metric}, axis=1
+        # )
+        
+        # self.log.info(blue_data)
+        # self.log.info(red_data)
+        # blue_data["Alliance"] = "Blue"
+        # red_data["Alliance"] = "Red"
+        # merged_data = blue_data.append(red_data)
+        # assembled_data = pd.merge(
+        #     team_lists, merged_data, on=["matchId", "Alliance"], how="inner"
+        # )[["teamid", metric]]
+        all_matches = self.data_accessor.get_all_matches()
+        all_alliances = self.data_accessor.get_all_alliances()
+        all_metrics = self.data_accessor.get_all_data_for_a_metric(metric)
+        alliance_metric_info = []
+        for color in ["Red", "Blue"]:
+            for matchid in all_matches:
+                alliance_metric_info.append([
+                    matchid, 
+                    color,
+                    [teamids[0] for teamids in all_alliances if teamids[1] == matchid and teamids[2] == color],
+                    [all_metrics[matchid][0] if color == "Red" else all_metrics[matchid][1] for metricdata in all_metrics][0]
+                ])
+        assembled_data = pd.DataFrame(numpy.array([match for match in alliance_metric_info if match[-1] != None]), columns=['matchId', 'Alliance', 'teams', 'metricdata'])
         mlb = MultiLabelBinarizer(sparse_output=True)
-        sparse_teams = mlb.fit_transform(assembled_data["teamid"])
-        oprs = lsmr(sparse_teams, assembled_data[metric].to_numpy())
+        self.log.info(assembled_data["teams"])
+        sparse_teams = mlb.fit_transform(assembled_data["teams"])
+        oprs = lsmr(sparse_teams, assembled_data['metricdata'].apply(lambda val: int(val)).to_numpy())
         teams_with_oprs = pd.DataFrame([mlb.classes_, oprs[0]]).transpose()
         teams_with_oprs.rename({0: "teams", 1: f"{metric}_opr"}, inplace=True, axis=1)
         teams_with_oprs.set_index("teams", inplace=True)
+        pd.set_option("display.max_rows", None, "display.max_columns", None) #remove after testing
         return teams_with_oprs
 
     def group_notes(self):
@@ -242,6 +260,9 @@ class DataCalculator:
         tele_miss_med = self.calculate_team_median("teleop_misses")
         climb_time_med = self.calculate_team_median("climb_time")
 
+        self.log.info("Calculating OPR")
+        auto_high_opr= self.calculate_opr("total_points")
+
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
             [
@@ -269,7 +290,7 @@ class DataCalculator:
             [
                 auto_low_avg,
                 auto_high_avg,
-                # auto_miss_avg,
+                #auto_miss_avg,
                 tele_low_avg,
                 tele_high_avg,
                 tele_miss_avg,
