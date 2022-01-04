@@ -7,7 +7,7 @@ from flask import Flask, make_response, render_template, request
 from pytz import timezone
 
 app = Flask(__name__)
-currMatch = 1
+currMatch = 76
 with open("./config/config.json") as f:
     config = json.load(f)
 gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')

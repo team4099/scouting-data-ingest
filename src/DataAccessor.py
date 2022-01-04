@@ -7,6 +7,7 @@ from typing import Union, Optional, List, Literal
 
 from sqlalchemy import Boolean
 from sqlalchemy.sql.elements import Null
+from sqlalchemy.orm import load_only
 
 from SQLObjects import (
     Alliance,
@@ -76,6 +77,30 @@ class DataAccessor:
             hashoutput[matchinfo[0]] = (matchinfo[1], matchinfo[2])
         return hashoutput
         
+    def get_all_match_objects(
+        self,
+        metrics: List[str]
+    ) -> Optional[List[MatchDatum]]:
+        query = self.session.query(MatchDatum).options(load_only(*metrics))
+        return list(self.session.execute(query).fetchall())
+
+    def get_all_alliance(
+        self,
+    ) -> Optional[List[TeamDatum]]:
+
+        query = self.session.query(TeamDatum.match_id, TeamDatum.team_id, TeamDatum.alliance)
+        all_alliances = list(self.session.execute(query).fetchall())
+        allredteams = [teamdataobject[1] for teamdataobject in all_alliances if teamdataobject[2] == Alliance.red]
+        allblueteams = [teamdataobject[1] for teamdataobject in all_alliances if teamdataobject[2] == Alliance.blue]
+        red_alliances = list(zip(*[iter(allredteams)]*3))
+        blue_alliances = list(zip(*[iter(allblueteams)]*3))
+        all_alliance_info = []
+        for alliance in red_alliances:
+            all_alliance_info.append(alliance)
+        for alliance in blue_alliances:
+            all_alliance_info.append(alliance)
+        return all_alliance_info
+    
     def get_all_matches(
         self,
     ) -> Optional[List[Match]]:

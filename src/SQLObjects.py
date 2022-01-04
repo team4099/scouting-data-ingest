@@ -62,18 +62,6 @@ class Match(Base):
     def __repr__(self) -> str:
         return f"<Match id={self.id}>"
 
-    def get_red_alliance(self):
-        return sorted(
-            [a for a in self.alliance_associations if a.alliance == Alliance.red],
-            key=lambda x: x.driver_station,
-        )
-
-    def get_blue_alliance(self):
-        return sorted(
-            [a for a in self.alliance_associations if a.alliance == Alliance.blue],
-            key=lambda x: x.driver_station,
-        )
-
 
 class Team(Base):
     __tablename__ = "teams"
