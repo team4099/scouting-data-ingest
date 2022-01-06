@@ -153,14 +153,13 @@ class DataCalculator:
 
     def calculate_opr(self, metric):
         #pd.set_option("display.max_rows", None, "display.max_columns", None) #remove after testing
-        all_matches = self.data_accessor.get_all_match_objects([f"r_{metric}", f"b_{metric}"])
+        all_matches = self.data_accessor.get_all_match_objects([f"r_{metric}", f"b_{metric}"]) #getting all data 
         all_alliances = self.data_accessor.get_all_alliance()
         alliance_metric_info = []
         for match in range(int(len(all_alliances)/2)):
             alliance_metric_info.append([all_alliances[match], all_matches[match][1]])
         for match in range(int(len(all_alliances)/2)):
             alliance_metric_info.append([all_alliances[int(len(all_alliances)/2) + match], all_matches[match][2]])
-        self.log.info(alliance_metric_info)
         assembled_data = pd.DataFrame(numpy.array(alliance_metric_info), columns=['teams', 'metricdata'])
         mlb = MultiLabelBinarizer(sparse_output=True)
         sparse_teams = mlb.fit_transform(assembled_data["teams"])
@@ -225,7 +224,7 @@ class DataCalculator:
         climb_time_med = self.calculate_team_median("climb_time")
 
         self.log.info("Calculating OPR")
-        auto_high_opr= self.calculate_opr("total_points")
+        total_points_opr= self.calculate_opr("total_points")
 
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(

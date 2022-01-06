@@ -94,12 +94,7 @@ class DataAccessor:
         allblueteams = [teamdataobject[1] for teamdataobject in all_alliances if teamdataobject[2] == Alliance.blue]
         red_alliances = list(zip(*[iter(allredteams)]*3))
         blue_alliances = list(zip(*[iter(allblueteams)]*3))
-        all_alliance_info = []
-        for alliance in red_alliances:
-            all_alliance_info.append(alliance)
-        for alliance in blue_alliances:
-            all_alliance_info.append(alliance)
-        return all_alliance_info
+        return red_alliances + blue_alliances
     
     def get_all_matches(
         self,
