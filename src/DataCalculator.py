@@ -152,7 +152,6 @@ class DataCalculator:
         self.session.commit()
 
     def calculate_opr(self, metric):
-        #pd.set_option("display.max_rows", None, "display.max_columns", None) #remove after testing
         all_matches = self.data_accessor.get_all_match_objects([f"r_{metric}", f"b_{metric}"]) #getting all data 
         all_alliances = self.data_accessor.get_all_alliance()
         alliance_metric_info = []
@@ -168,7 +167,6 @@ class DataCalculator:
         teams_with_oprs.rename({0: "teams", 1: f"{metric}_opr"}, inplace=True, axis=1)
         teams_with_oprs.set_index("teams", inplace=True)
         return teams_with_oprs
-        
 
     def group_notes(self):
         team_data = self.data_accessor.get_all_team_data_df()[

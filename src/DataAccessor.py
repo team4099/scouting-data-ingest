@@ -49,33 +49,6 @@ class DataAccessor:
         self.last_checked = None
 
         self.log.info("DataAccessor Loaded!")
-
-    def get_all_alliances(
-        self,
-    ) -> Optional[List[Team]]:
-        """
-        Get all teams in a given alliance from a certain match
-        
-        """
-        
-        query = "SELECT teamid, matchid, color FROM alliances;"
-        return list(self.session.execute(query).fetchall())
-    
-    def get_all_data_for_a_metric(
-        self,
-        metric: str
-    ) -> Optional[List[MatchDatum]]:
-        """
-        
-        Get all data for a specific metric for both red and blue alliances
-
-        """
-        query = f"SELECT match_id, r_{metric}, b_{metric} FROM match_data;"
-        metricdata = list(self.session.execute(query).fetchall())
-        hashoutput = {}
-        for matchinfo in metricdata:
-            hashoutput[matchinfo[0]] = (matchinfo[1], matchinfo[2])
-        return hashoutput
         
     def get_all_match_objects(
         self,
@@ -95,17 +68,6 @@ class DataAccessor:
         red_alliances = list(zip(*[iter(allredteams)]*3))
         blue_alliances = list(zip(*[iter(allblueteams)]*3))
         return red_alliances + blue_alliances
-    
-    def get_all_matches(
-        self,
-    ) -> Optional[List[Match]]:
-        """
-        
-        Get all match ids
-
-        """
-        query = "SELECT match_id from match_data;"
-        return [match[0] for match in list(self.session.execute(query).fetchall()) if len(match) > 0]
 
     def get_match(
         self,
