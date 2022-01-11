@@ -31,11 +31,6 @@ class Config:
         self.refresh()
 
     def refresh(self, validate=False):
-        with open("config/config.json") as f:
-            config = json.load(f)
-
-        self.config_dict = config
-
         self.tba_key = os.getenv("TBA_KEY")
         self.use_tba = os.getenv("USE_TBA")
         self.year = os.getenv("YEAR")

@@ -5,17 +5,18 @@ import gspread
 import pandas as pd
 from flask import Flask, make_response, render_template, request
 from pytz import timezone
+from Config import Config
+from loguru import logger
 
 app = Flask(__name__)
-currMatch = 76
-with open("./config/config.json") as f:
-    config = json.load(f)
-gc = gspread.service_account(f'./config/{config["Google-Credentials"]}')
-sim_file = gc.open(f'{config["Simulator Spreadsheet"]}')
+currMatch = 1
+config = Config(logger, simulation=True)
+gc = gspread.service_account(f'./config/{config.google_credentials}')
+sim_file = gc.open(f'{config.simulator_spreadsheet}')
 
 if "Data Worksheet" not in [i.title for i in sim_file.worksheets()]:
     # They've not run the "new" (as of 5/7/21) version so add it
-    main_sheet = gc.open(f'{config["Spreadsheet"]}').get_worksheet(0)
+    main_sheet = gc.open(f'{config.spreadsheet}').get_worksheet(0)
     main_data = pd.DataFrame(main_sheet.get_all_records())
     new_sheet = sim_file.add_worksheet(
         "Data Worksheet", rows=main_sheet.row_count, cols=main_sheet.col_count
@@ -27,7 +28,7 @@ if "Data Worksheet" not in [i.title for i in sim_file.worksheets()]:
 
 orig_sheet = sim_file.worksheet("Data Worksheet")
 orig_data = pd.DataFrame(orig_sheet.get_all_records())
-sim_sheet = gc.open(f'{config["Simulator Spreadsheet"]}').get_worksheet(0)
+sim_sheet = gc.open(f'{config.simulator_spreadsheet}').get_worksheet(0)
 
 with open("./data/2020vahay.json") as f:
     data = f.read()
