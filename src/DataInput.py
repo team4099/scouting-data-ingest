@@ -78,6 +78,7 @@ class DataInput:
 
         self.log.info("DataInput Loaded!")
 
+
     def get_tba_data(self):
         """
 
@@ -231,6 +232,9 @@ class DataInput:
         self.log.info("Data successfully retrieved")
         self.log.info("Adding Matches")
 
+        for team in team_r.json():
+            self.data_accessor.add_team(team)
+            
         for match in match_r.json():
             self.data_accessor.add_match(
                 match["key"],
@@ -239,6 +243,13 @@ class DataInput:
                 match["match_number"],
                 match["event_key"],
             )
+            for color in ["red", "blue"]:
+                for index, team in enumerate(match["alliances"][color]["team_keys"]):
+                    self.data_accessor.add_alliance_association(
+                        match["key"],
+                        Alliance(color),
+                        team,
+                        index+1
+                    )
 
-        for team in team_r.json():
-            self.data_accessor.add_team(team)
+        

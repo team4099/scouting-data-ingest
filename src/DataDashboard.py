@@ -54,6 +54,7 @@ connection = engine.connect()
 data_accessor = DataAccessor(engine, session, connection, config)
 data_input = DataInput(engine, session, connection, data_accessor, config)
 calculated_team_data_object = None
+alliance_info = data_accessor.get_alliance_associations(json=True)
 
 
 @app.route("/warnings", methods=["GET", "POST"])

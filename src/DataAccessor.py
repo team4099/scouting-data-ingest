@@ -15,6 +15,7 @@ from SQLObjects import (
     CompLevel,
     Match,
     Team,
+    AllianceAssociation,
     Warning,
     Info,
     Scout,
@@ -26,6 +27,7 @@ from SQLObjects import (
     team_data_map,
 )
 from terminal import logger
+from json import dumps
 
 
 class DataAccessor:
@@ -54,6 +56,9 @@ class DataAccessor:
         self,
         metrics: Optional[List[str]] = None
     ) -> Optional[List[MatchDatum]]:
+        """
+        Gets specific metrics for all MatchDatum objects
+        """
         query = self.session.query(MatchDatum)
         if metrics is not None:
             query = query.options(load_only(*metrics))
@@ -87,6 +92,38 @@ class DataAccessor:
         """
         query = self.session.query(Team).filter(Team.id == id).first()
         return query
+
+    def get_alliance_associations(
+        self,
+        match_id: Optional[str] = None,
+        alliance: Optional[Alliance] = None,
+        team_id: Optional[str] = None,
+        driver_station: Optional[int] = None,
+        json: Optional[Boolean] = False
+    ) -> Optional[List[AllianceAssociation]]:
+        """
+        Get a alliance association by id
+        """
+        query = self.session.query(AllianceAssociation)
+        if match_id:
+            query = query.filter(AllianceAssociation.match_id == match_id)
+        if team_id:
+            query = query.filter(AllianceAssociation.team_id == team_id)
+        if alliance:
+            query = query.filter(AllianceAssociation.alliance == alliance)
+        if driver_station:
+            query = query.filter(AllianceAssociation.driver_station == driver_station)
+        
+        alliance_associations = query.all() if query is not None else None
+        if (json):
+            alliancejsondict = {}
+            for alliance in alliance_associations:
+                if alliance.match_id not in alliancejsondict.keys():
+                    alliancejsondict[alliance.match_id] = {"red":["","",""], "blue":["","",""]}
+                alliancejsondict[alliance.match_id][alliance.alliance.value][alliance.driver_station-1] = alliance.team_id
+            return dumps(alliancejsondict)
+        else:
+            return alliance_associations 
 
     def get_warnings(
         self,
@@ -322,6 +359,24 @@ class DataAccessor:
         self.session.add(md)
         self.session.flush()
 
+    def add_alliance_association(
+        self,
+        match_id: str,
+        alliance: Alliance,
+        team_id: str,
+        driver_station: int
+    ) -> None:
+        aa = AllianceAssociation(
+            match_id=match_id,
+            team_id=team_id,
+            alliance=alliance,
+            driver_station=driver_station
+        )
+
+        self.session.add(aa)
+        self.session.flush()
+
+
     def add_team_datum(
         self,
         team_id: str,
@@ -331,12 +386,12 @@ class DataAccessor:
         driver_station: int,
         team_datum_json: dict,
     ) -> None:
-        # if (
-        #    self.get_team(team_id) is None
-        #    or self.get_team_data(match_id=match_id, team_id=team_id, alliance=alliance)
-        #    != []
-        # ):
-        #    return None
+        if (
+           self.get_team(team_id) is None
+           or self.get_team_data(match_id=match_id, team_id=team_id, alliance=alliance)
+           != []
+        ):
+           return None
 
         new_vars = {}
         td = TeamDatum(

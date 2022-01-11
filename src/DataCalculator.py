@@ -152,6 +152,7 @@ class DataCalculator:
         self.session.commit()
 
     def calculate_opr(self, metric):
+        #self.session.flush()
         all_matches = self.data_accessor.get_all_match_objects([f"r_{metric}", f"b_{metric}"]) #getting all data 
         all_alliances = self.data_accessor.get_all_alliance()
         alliance_metric_info = []

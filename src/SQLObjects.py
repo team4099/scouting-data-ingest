@@ -43,7 +43,16 @@ class ClimbType(enum.Enum):
 
 
 # Declaring SQL Objects
+class Team(Base):
+    __tablename__ = "teams"
+    id = Column(String(10), primary_key=True)
 
+    team_data = relationship("TeamDatum", back_populates="team")
+    calculated_team_data = relationship("CalculatedTeamDatum", back_populates="team")
+    alliance_associations = relationship("AllianceAssociation", back_populates="team")
+
+    def __repr__(self) -> str:
+        return f"<Team id={self.id}>"
 
 class Match(Base):
     __tablename__ = "matches"
@@ -53,6 +62,7 @@ class Match(Base):
     warnings = relationship("Warning", back_populates="match")
     predictions = relationship("Prediction", back_populates="match")
     team_data = relationship("TeamDatum", back_populates="match")
+    alliance_associations = relationship("AllianceAssociation", back_populates="match")
 
     comp_level = Column(Enum(CompLevel))
     set_number = Column(Integer)
@@ -63,15 +73,29 @@ class Match(Base):
         return f"<Match id={self.id}>"
 
 
-class Team(Base):
-    __tablename__ = "teams"
-    id = Column(String(10), primary_key=True)
+class AllianceAssociation(Base):
+    __tablename__ = "alliance_associations"
+    id = Column(Integer, primary_key=True)
 
-    team_data = relationship("TeamDatum", back_populates="team")
-    calculated_team_data = relationship("CalculatedTeamDatum", back_populates="team")
+    match_id = Column(String(50), ForeignKey("matches.id", name="match_id"))
+    match = relationship(
+        "Match",
+        foreign_keys=[match_id],
+        back_populates="alliance_associations",
+    )
+
+    team_id = Column(String(10), ForeignKey("teams.id", name="team_id"))
+    team = relationship(
+        "Team",
+        foreign_keys = [team_id],
+        back_populates="alliance_associations"
+    )
+
+    alliance = Column(Enum(Alliance))
+    driver_station = Column(Integer)
 
     def __repr__(self) -> str:
-        return f"<Team id={self.id}>"
+        return f"<AllianceAssociation id={self.id} match_id={self.match_id} team_id={self.team_id} alliance={self.alliance} driver_station={self.driver_station}>"
 
 
 class Warning(Base):
