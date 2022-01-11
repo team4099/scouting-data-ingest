@@ -52,9 +52,11 @@ class DataAccessor:
         
     def get_all_match_objects(
         self,
-        metrics: List[str]
+        metrics: Optional[List[str]] = None
     ) -> Optional[List[MatchDatum]]:
-        query = self.session.query(MatchDatum).options(load_only(*metrics))
+        query = self.session.query(MatchDatum)
+        if metrics is not None:
+            query = query.options(load_only(*metrics))
         return list(self.session.execute(query).fetchall())
 
     def get_all_alliance(
@@ -157,11 +159,12 @@ class DataAccessor:
         """
         Get a match by id
         """
-        query = (
-            self.session.query(MatchDatum)
-            .filter(MatchDatum.match_id == match_id)
-            .first()
-        )
+        query = self.session.query(MatchDatum)
+
+        if match_id is not None:
+            query = query.filter(MatchDatum.match_id == match_id).first()
+        else:
+            query = query.all()
 
         return query
 
@@ -295,6 +298,18 @@ class DataAccessor:
             match_json["post_result_time"], pytz.utc
         )
 
+        def climb_tf(climb):
+            if climb == ClimbType.none:
+                return ClimbType.no_climb
+            return climb
+
+        new_vars["r_endgame_1"] = climb_tf(ClimbType(match_json["score_breakdown.red.endgameRobot1"].lower()))
+        new_vars["r_endgame_2"] = climb_tf(ClimbType(match_json["score_breakdown.red.endgameRobot2"].lower()))
+        new_vars["r_endgame_3"] = climb_tf(ClimbType(match_json["score_breakdown.red.endgameRobot3"].lower()))
+        new_vars["b_endgame_1"] = climb_tf(ClimbType(match_json["score_breakdown.blue.endgameRobot1"].lower()))
+        new_vars["b_endgame_2"] = climb_tf(ClimbType(match_json["score_breakdown.blue.endgameRobot2"].lower()))
+        new_vars["b_endgame_3"] = climb_tf(ClimbType(match_json["score_breakdown.blue.endgameRobot3"].lower()))
+
         # Dynamically set Year specific items
         for letter, color in zip(["r", "b"], ["red", "blue"]):
             for key, value in match_data_map.items():
@@ -335,10 +350,10 @@ class DataAccessor:
             team_datum_json["Timestamp"], "%m/%d/%Y %H:%M:%S"
         ).replace(tzinfo=pytz.timezone("America/New_York"))
 
-        #if type(team_datum_json["Climb Type"]) != Null:
-        #    new_vars["final_climb_type"] = ClimbType(
-        #        team_datum_json["Climb Type"]
-        #    )
+        if type(team_datum_json["Climb Type"]) != Null:
+            new_vars["final_climb_type"] = ClimbType(
+                team_datum_json["Climb Type"].lower()
+            )
 
         # Dynamically set Year specific items
         for key, value in team_data_map.items():

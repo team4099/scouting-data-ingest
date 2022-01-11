@@ -146,9 +146,9 @@ class MatchDatum(Base):
     r_init_line_1 = Column(String(50))
     r_init_line_2 = Column(String(50))
     r_init_line_3 = Column(String(50))
-    r_endgame_1 = Column(String(50))
-    r_endgame_2 = Column(String(50))
-    r_endgame_3 = Column(String(50))
+    r_endgame_1 = Column(Enum(ClimbType))
+    r_endgame_2 = Column(Enum(ClimbType))
+    r_endgame_3 = Column(Enum(ClimbType))
     r_auto_cells_bottom = Column(Integer)
     r_auto_cells_outer = Column(Integer)
     r_auto_cells_inner = Column(Integer)
@@ -181,9 +181,9 @@ class MatchDatum(Base):
     b_init_line_1 = Column(String(50))
     b_init_line_2 = Column(String(50))
     b_init_line_3 = Column(String(50))
-    b_endgame_1 = Column(String(50))
-    b_endgame_2 = Column(String(50))
-    b_endgame_3 = Column(String(50))
+    b_endgame_1 = Column(Enum(ClimbType))
+    b_endgame_2 = Column(Enum(ClimbType))
+    b_endgame_3 = Column(Enum(ClimbType))
     b_auto_cells_bottom = Column(Integer)
     b_auto_cells_outer = Column(Integer)
     b_auto_cells_inner = Column(Integer)
@@ -324,9 +324,6 @@ match_data_map = {
     "init_line_1": "initLineRobot1",
     "init_line_2": "initLineRobot2",
     "init_line_3": "initLineRobot3",
-    "endgame_1": "endgameRobot1",
-    "endgame_2": "endgameRobot2",
-    "endgame_3": "endgameRobot3",
     "auto_cells_bottom": "autoCellsBottom",
     "auto_cells_outer": "autoCellsOuter",
     "auto_cells_inner": "autoCellsInner",
