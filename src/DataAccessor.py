@@ -78,19 +78,34 @@ class DataAccessor:
 
     def get_match(
         self,
-        key: str
+        key: Optional[str] = None
     ) -> Optional[Match]:
         """
         Get a match by id
         """
-        query = self.session.query(Match).filter(Match.id == key).first()
+        query = self.session.query(Match)
+
+        if key is not None:
+            query = query.filter(Match.id == key).first()
+        else:
+            query = query.all()
+
         return query
 
-    def get_team(self, id: str) -> Optional[Team]:
+    def get_team(
+        self, 
+        id: Optional[str] = None
+    ) -> Optional[Team]:
         """
         Get a team by id
         """
-        query = self.session.query(Team).filter(Team.id == id).first()
+        query = self.session.query(Team)
+
+        if id is not None:
+            query = query.filter(Team.id == id).first()
+        else:
+            query = query.all()
+
         return query
 
     def get_alliance_associations(
@@ -99,7 +114,8 @@ class DataAccessor:
         alliance: Optional[Alliance] = None,
         team_id: Optional[str] = None,
         driver_station: Optional[int] = None,
-        json: Optional[Boolean] = False
+        json: Optional[Boolean] = False,
+        dictionary: Optional[Boolean] = False
     ) -> Optional[List[AllianceAssociation]]:
         """
         Get a alliance association by id
@@ -115,13 +131,16 @@ class DataAccessor:
             query = query.filter(AllianceAssociation.driver_station == driver_station)
         
         alliance_associations = query.all() if query is not None else None
-        if (json):
+        if json or dictionary:
             alliancejsondict = {}
             for alliance in alliance_associations:
                 if alliance.match_id not in alliancejsondict.keys():
                     alliancejsondict[alliance.match_id] = {"red":["","",""], "blue":["","",""]}
                 alliancejsondict[alliance.match_id][alliance.alliance.value][alliance.driver_station-1] = alliance.team_id
-            return dumps(alliancejsondict)
+            if json:
+                return dumps(alliancejsondict)
+            else:
+                return alliancejsondict
         else:
             return alliance_associations 
 
@@ -149,12 +168,12 @@ class DataAccessor:
 
     def get_info(
         self,
-        id: str,
+        field: str,
     ) -> Optional[Info]:
         """
-        Get a info by id
+        Get a info by field
         """
-        query = self.session.query(Info).filter(Info.id == id).first()
+        query = self.session.query(Info).filter(Info.id == field).first()
         return query
 
     def get_scouts(
@@ -241,6 +260,19 @@ class DataAccessor:
         )
 
         return query
+    
+    def temp_calc_team_data(
+        self,
+        team_id: Optional[str] = None,
+    ) -> Optional[CalculatedTeamDatum]:
+        query = self.session.query(CalculatedTeamDatum)
+
+        if team_id is not None:
+            query = query.filter(CalculatedTeamDatum.team_id == team_id).first()
+        else:
+            query = query.all()
+
+        return query
 
     def add_match(
         self,
@@ -300,7 +332,10 @@ class DataAccessor:
             self.session.add(s)
 
     def add_prediction(
-        self, scout_id: str, match_id: str, prediction: Alliance
+        self,
+        scout_id: str,
+        match_id: str,
+        prediction: Alliance
     ) -> None:
         if not self.get_predictions(scout_id=scout_id, match_id=match_id):
             p = Prediction(scout_id=scout_id, match_id=match_id, prediction=prediction)
@@ -418,6 +453,7 @@ class DataAccessor:
 
         self.session.add(td)
         self.session.flush()
+        self.session.commit()
 
     def add_calculated_team_datum(self, team_id: str, calculated_team_datum_json: dict):
         if self.get_team(team_id) is None:
@@ -464,7 +500,11 @@ class DataAccessor:
         self.session.commit()
 
     def update_scout(
-        self, scout_id: str, active: bool = None, points: int = None, streak: int = None
+        self,
+        scout_id: str,
+        active: bool = None,
+        points: int = None,
+        streak: int = None
     ):
         scout = self.get_scouts(scout_id=scout_id)
 
@@ -506,9 +546,9 @@ class DataAccessor:
         self.session.commit()
 
     def update_warning(self, id, ignore):
-        query = self.session.query(Warnings)
+        query = self.session.query(Warning)
 
-        query = query.filter(Warnings.id == id)[0]
+        query = query.filter(Warning.id == id)[0]
 
         query.ignore = ignore
 
@@ -516,7 +556,7 @@ class DataAccessor:
         self.session.commit()
 
     def delete_warnings(self):
-        query = self.session.query(Warnings)
+        query = self.session.query(Warning)
         query.delete()
 
     def update_info(self, id, value):

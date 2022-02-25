@@ -224,6 +224,10 @@ class DataCalculator:
 
         self.log.info("Calculating OPR")
         total_points_opr= self.calculate_opr("total_points")
+        # everything opr but climb
+        # points scored during auto
+        # points scored during teleop
+        # run a sim for 2020 vahay and check reliability of 
 
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(

@@ -53,6 +53,12 @@ class Team(Base):
 
     def __repr__(self) -> str:
         return f"<Team id={self.id}>"
+    
+    @property
+    def serialize(self):
+        return {
+            "team_id": self.id
+        }
 
 class Match(Base):
     __tablename__ = "matches"
@@ -71,6 +77,16 @@ class Match(Base):
 
     def __repr__(self) -> str:
         return f"<Match id={self.id}>"
+
+    @property
+    def serialize(self):
+       """Return object data in easily serializable format"""
+       return {
+           "match_id": self.id,
+            "comp_level": self.comp_level,
+            "match_number": self.match_number,
+            "event_key": self.event_key
+       }
 
 
 class AllianceAssociation(Base):
@@ -95,8 +111,7 @@ class AllianceAssociation(Base):
     driver_station = Column(Integer)
 
     def __repr__(self) -> str:
-        return f"<AllianceAssociation id={self.id} match_id={self.match_id} team_id={self.team_id} alliance={self.alliance} driver_station={self.driver_station}>"
-
+        return f"<AllianceAssociation id={self.id} match_id={self.match_id} team_id={self.team_id} alliance={self.alliance} driver_station={self.driver_station}>"    
 
 class Warning(Base):
     __tablename__ = "warnings"
@@ -111,6 +126,17 @@ class Warning(Base):
     def __repr__(self) -> str:
         return f"<Warning match={self.match} alliance={self.alliance} category={self.category} content={self.content} ignore={self.ignore}>"
 
+    @property
+    def serialize(self):
+        return {
+            self.id: {
+                "match_key": self.match_id,
+                "alliance": "red" if self.alliance == Alliance.red else "blue",
+                "category": self.category,
+                "content": self.content,
+                "ignore": self.ignore
+            }
+        }
 
 class Info(Base):
     __tablename__ = "infos"
@@ -119,6 +145,12 @@ class Info(Base):
 
     def __repr__(self) -> str:
         return f"<Info id={self.id} value={self.value}>"
+    
+    @property
+    def serialize(self):
+        return {
+            self.id: self.value
+        }
 
 
 class Scout(Base):
@@ -132,6 +164,16 @@ class Scout(Base):
 
     def __repr__(self) -> str:
         return f"<Scout id={self.id} active={self.active} points={self.points} streak={self.streak}>"
+    
+    @property
+    def serialize(self):
+        return {
+            self.id: {
+                "active": self.active,
+                "points": self.points,
+                "streak": self.streak
+            }
+        }
 
 
 class Prediction(Base):
@@ -146,6 +188,11 @@ class Prediction(Base):
     def __repr__(self) -> str:
         return f"<Prediction id={self.id} scout={self.scout} match={self.match} prediction={self.prediction}>"
 
+    # @property
+    # def serialize(self):
+    #     return {
+
+    #     }    
 
 # Define MatchDatum, TeamDatum, and CalculatedTeamDatum Object below
 # Each object should follow according to TBA's schema and the form's questions respectively
@@ -240,6 +287,60 @@ class MatchDatum(Base):
     def __repr__(self) -> str:
         return f"<MatchDatum id={self.id} match_id={self.match_id}>"
 
+    @property
+    def serialize(self):
+       """Return object data in easily serializable format"""
+       return {
+           self.match_id: {
+               "currMatch": {
+                   "predictedTime": self.predicted_time,
+                   "alliances": {
+                       "blue": [],
+                       "red": []    # TODO figure out if you can access data accessor fuctions in sql objects
+                   },
+               },
+               "currMatchData": {
+                   "postResultTime": self.post_result_time,
+                   "predictions": [], # TODO figure out predictions
+               },
+               "Auto Inner": {
+                   "red": self.r_auto_cells_inner,
+                   "blue": self.b_auto_cells_inner
+               },
+               "Auto Outer": {
+                   "red": self.r_auto_cells_outer,
+                   "blue": self.b_auto_cells_outer
+               },
+               "Teleop Low Goal": {
+                   "red": self.r_teleop_cells_bottom,
+                   "blue": self.b_teleop_cells_bottom
+               },
+               "Teleop Outer": {
+                   "red": self.r_teleop_cells_outer,
+                   "blue": self.b_teleop_cells_outer
+               },
+               "Teleop Inner": {
+                   "red": self.r_teleop_cells_inner,
+                   "blue": self.b_teleop_cells_inner
+               },
+               "Endgame Points": {
+                   "red": self.r_endgame_points,
+                   "blue": self.b_endgame_points
+               },
+               "Number Hanging": {
+                   "red": self.r_num_hanging,
+                   "blue": self.b_num_hanging
+               },
+               "Foul Points": {
+                   "red": self.r_foul_points,
+                   "blue": self.b_foul_points
+               },
+               "Total Points": {
+                   "red": self.r_total_points,
+                   "blue": self.b_total_points
+               }
+           }
+       }
 
 class TeamDatum(Base):
     __tablename__ = "team_data"
@@ -285,6 +386,7 @@ class TeamDatum(Base):
 
     def __repr__(self) -> str:
         return f"<TeamDatum id={self.id} team_id={self.team_id} match_id={self.match_id} alliance={self.alliance} driver_station={self.driver_station}>"
+    
 
 
 class CalculatedTeamDatum(Base):
@@ -328,6 +430,48 @@ class CalculatedTeamDatum(Base):
     teleop_miss_pct = Column(Float)
 
     comments = Column(Text)
+
+    @property
+    def serialize(self):
+       """Return object data in easily serializable format"""
+       return {
+           self.team_id[3:] : {
+               "accuracy": {
+                   "high": self.teleop_high_pct,
+                   "low": self.teleop_low_pct,
+                   "miss": self.teleop_miss_pct
+               },
+               "auto": {
+                   "high_goal": self.auto_high_goal_avg,
+                   "low_goal": self.auto_low_goal_avg,
+                   "misses": self.auto_misses_avg,
+               },
+               "climb": {
+                   "hang": self.hang_pct,
+                   "no_climb": self.no_climb_pct,
+                   "park": self.park_pct
+               },
+               "misc": {
+                   "climb_time": self.climb_time_avg,
+                   "fouls": self.fouls_avg
+               },
+               "teleop": {
+                   "high_goal": self.teleop_high_goal_avg,
+                   "low_goal": self.teleop_low_goal_avg,
+                   "misses": self.teleop_misses_avg
+               },
+               "zones": {
+                   "far_trench": self.from_far_trench_usage,
+                   "initiation_line": self.from_initiation_line_usage,
+                   "near_trench": self.from_near_trench_usage,
+                   "rendezvous_point": self.from_rendezvous_point_usage,
+                   "target_zone": self.from_target_zone_usage
+               },
+               "next_matches": [
+                   
+               ]
+           }
+       }
 
 
 def flatten_json(json):

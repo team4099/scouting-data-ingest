@@ -1,5 +1,6 @@
 import datetime
-from flask import Flask, render_template
+import itertools
+from flask import Flask, render_template, jsonify
 from flask.globals import request
 import re
 from DataInput import DataInput
@@ -15,7 +16,7 @@ from sqlalchemy import (
     Float,
     null,
 )
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker,scoped_session
 from Config import Config
 from DataAccessor import DataAccessor
 from loguru import logger
@@ -40,7 +41,7 @@ def update_data_accessor(data_accessor=None):
     connection = engine.connect()
 
     data_accessor.engine = engine
-    data_accessor.session = session
+    data_accessor.session = scoped_session(session)
     data_accessor.connection = connection
 
     return data_accessor
@@ -49,7 +50,8 @@ def update_data_accessor(data_accessor=None):
 engine = create_engine(f"mysql+pymysql://{config.db_user}:{config.db_pwd}@db/scouting")
 session_template = sessionmaker()
 session_template.configure(bind=engine)
-session = session_template()
+s_session = scoped_session(session_template)
+session = s_session
 connection = engine.connect()
 data_accessor = DataAccessor(engine, session, connection, config)
 data_input = DataInput(engine, session, connection, data_accessor, config)
@@ -399,6 +401,147 @@ def scouts():
 @app.route("/form", methods=["GET"])
 def form():
     return render_template("form.html")
+
+@app.route("/api/get_match_data", methods=["GET"])
+def get_match_data():
+    all_matches = [match_object.serialize for match_object in data_accessor.get_match_datum()]
+    jsonoutput = {}
+    for match in all_matches:
+        match_id = list(match.keys())[0] # i cannot think of a more efficient way to do this
+        jsonoutput[match_id] = match[match_id]
+        all_teams_for_match = data_accessor.get_alliance_associations(
+            match_id = match_id,
+            dictionary = True
+        )[match_id]
+        jsonoutput[match_id]["currMatch"]["alliances"] = all_teams_for_match
+        jsonoutput[match_id]["currMatchData"]["predictions"] = [] #TODO figure out predictions
+        jsonoutput[match_id]["team_metrics"] = {}
+        for team_id in all_teams_for_match["red"]:
+            jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
+            jsonoutput[match_id]["team_metrics"][team_id]["alliance"] = "red"
+        for team_id in all_teams_for_match["blue"]:
+            jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
+            jsonoutput[match_id]["team_metrics"][team_id]["alliance"] = "blue"
+
+        # for team_id in list(itertools.chain(*list(all_teams_for_match.values()))):
+        #     jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
+
+    return jsonoutput
+
+@app.route("/api/match_keys", methods=["GET"])
+def get_match_keys():
+    return jsonify(
+        [match.serialize["match_id"] for match in data_accessor.get_match()]
+    )
+
+@app.route("/api/team_ids", methods=["GET"])
+def get_team_ids():
+    return jsonify(
+        [team.serialize["team_id"] for team in data_accessor.get_warnings()]
+    )
+
+@app.route("/api/get_all_warnings", methods=["GET"])
+def get_all_warnings():
+    all_warnings = [warning.serialize for warning in data_accessor.get_warnings()]
+    jsonoutput = {}
+    for warning in all_warnings:
+        warning_id = list(warning.keys())[0]
+        jsonoutput[warning_id] = warning[warning_id]
+    return jsonoutput
+
+@app.route("/api/get_all_scouts", methods=["GET"]) #can't test but im confident this works
+def get_all_scouts():
+    all_scouts = [scout.serialize for scout in data_accessor.get_scouts()]
+    jsonoutput = {}
+    for scout in all_scouts:
+        scout_id = list(all_scouts.keys())[0]
+        jsonoutput[scout_id] = scout[scout_id]
+    return jsonoutput
+
+@app.route("/api/status", methods=["GET"])
+def get_api_status():
+    return {
+        "Last Match": data_accessor.get_info("Last Match").serialize["Last Match"],
+        "Status": data_accessor.get_info("Status").serialize["Status"]
+    }
+
+@app.route("/api/teamdatum/<teamid>", methods=["GET"])
+def get_team_datum(teamid):
+    if len(teamid) < 3 or "frc" != teamid[0:3]:
+        teamid = "frc" + teamid
+    return data_accessor.get_calculated_team_data(team_id = teamid).serialize
+
+
+# TODO write documentation on the correct POST request format :///
+@app.route("/api/add_team_datum", methods=["POST"])
+def add_team_datum():
+    data = request.args
+    # Year specific config
+
+    climb_type_map = {
+        "0": "hang",
+        "1": "park",
+        "2": "no_climb",
+        "3": "none"
+    }
+    data_accessor.add_team_datum(
+        team_id = "frc" + data.get("team_number"),
+        # scout_id = data["scout_id"],
+        match_id = data.get("match_key"),
+        alliance = Alliance.red if data.get("alliance") == "red" else Alliance.blue,
+        driver_station = data.get("driver_station"),
+        team_datum_json = {
+            "auto_low_goal": data.get("auto_low_goal"),
+            "auto_high_goal": data.get("auto_high_goal"),
+            "auto_misses": data.get("auto_misses"),
+            "auto_notes": data.get("auto_notes"),
+            "teleop_low_goal": data.get("teleop_low_goal"),
+            "teleop_high_goal": data.get("teleop_high_goal"),
+            "teleop_misses": data.get("teleop_misses"),
+            "control_panel": data.get("control_panel"),
+            "from_initiation_line": True if '0' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_target_zone": True if '1' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_near_trench": True if '2' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_rendezvous_point": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_far_trench": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "teleop_notes": data.get("teleop_notes"),
+            "climb_time": data.get("climb_time"),
+            "attempted_park": bool(data.get("attempted_park")),
+            "attempted_hang": bool(data.get("attempted_hang")),
+            "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
+        })
+    data_accessor.engine.dispose()
+    return "Worked"
+
+@app.route("/api/add_prediction", methods=["POST"])
+def add_prediction():
+    data = request.args
+    data_accessor.add_prediction(
+        scout_id = data["scout"],
+        match_id = data["match"],
+        prediction = Alliance.red if data["prediction"] == "red" else Alliance.blue,
+    )
+    return ""
+
+@app.route("/api/change_warning", methods=["POST"])
+def change_warning():
+    data = request.args
+    data_accessor.session.rollback()
+    data_accessor.update_warning(
+        id = data["warning_id"],
+        ignore = bool(data["ignore"])
+    )
+    data_accessor.engine.dispose()
+    return ""
+
+@app.route("/api/change_scout", methods=["POST"])
+def change_scout():
+    data = request.args
+    data_accessor.update_scout(
+        scout_id = data["scout_id"],
+        active = bool(data["active"])
+    )
+    return ""
 
 
 if __name__ == "__main__":
