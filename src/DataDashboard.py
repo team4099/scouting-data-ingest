@@ -41,7 +41,7 @@ def update_data_accessor(data_accessor=None):
     connection = engine.connect()
 
     data_accessor.engine = engine
-    data_accessor.session = scoped_session(session)
+    data_accessor.session = session
     data_accessor.connection = connection
 
     return data_accessor
@@ -50,8 +50,7 @@ def update_data_accessor(data_accessor=None):
 engine = create_engine(f"mysql+pymysql://{config.db_user}:{config.db_pwd}@db/scouting")
 session_template = sessionmaker()
 session_template.configure(bind=engine)
-s_session = scoped_session(session_template)
-session = s_session
+session = session_template()
 connection = engine.connect()
 data_accessor = DataAccessor(engine, session, connection, config)
 data_input = DataInput(engine, session, connection, data_accessor, config)
@@ -479,10 +478,11 @@ def add_team_datum():
     # Year specific config
 
     climb_type_map = {
-        "0": "hang",
-        "1": "park",
-        "2": "no_climb",
-        "3": "none"
+        "0": "none",
+        "1": "low",
+        "2": "mid",
+        "3": "high",
+        "4": "traversal"
     }
     data_accessor.add_team_datum(
         team_id = "frc" + data.get("team_number"),
@@ -491,27 +491,28 @@ def add_team_datum():
         alliance = Alliance.red if data.get("alliance") == "red" else Alliance.blue,
         driver_station = data.get("driver_station"),
         team_datum_json = {
-            "auto_low_goal": data.get("auto_low_goal"),
-            "auto_high_goal": data.get("auto_high_goal"),
+            "auto_lower_hub": data.get("auto_lower_hub"),
+            "auto_upper_hub": data.get("auto_upper_hub"),
             "auto_misses": data.get("auto_misses"),
             "auto_notes": data.get("auto_notes"),
-            "teleop_low_goal": data.get("teleop_low_goal"),
-            "teleop_high_goal": data.get("teleop_high_goal"),
+            "teleop_lower_hub": data.get("teleop_lower_hub"),
+            "teleop_upper_hub": data.get("teleop_upper_hub"),
             "teleop_misses": data.get("teleop_misses"),
-            "control_panel": data.get("control_panel"),
-            "from_initiation_line": True if '0' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_target_zone": True if '1' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_near_trench": True if '2' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_rendezvous_point": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_far_trench": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_fender": True if '0' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_elsewhere_in_tarmac": True if '1' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_launchpad": True if '2' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_terminal": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_hangar_zone": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_elsewhere_on_field": True if '5' in data.get("shooting_zones") else False, 
             "teleop_notes": data.get("teleop_notes"),
-            "climb_time": data.get("climb_time"),
-            "attempted_park": bool(data.get("attempted_park")),
-            "attempted_hang": bool(data.get("attempted_hang")),
+            "low_rung_climb_time": data.get("low_rung_climb_time"),
+            "mid_rung_climb_time": data.get("mid_rung_climb_time"),
+            "high_rung_climb_time": data.get("high_rung_climb_time"),
+            "traversal_rung_climb_time": data.get("traversal_rung_climb_time"),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
     data_accessor.engine.dispose()
-    return "Worked"
+    return ""
 
 @app.route("/api/add_prediction", methods=["POST"])
 def add_prediction():
@@ -525,8 +526,8 @@ def add_prediction():
 
 @app.route("/api/change_warning", methods=["POST"])
 def change_warning():
+    update_data_accessor(data_accessor)
     data = request.args
-    data_accessor.session.rollback()
     data_accessor.update_warning(
         id = data["warning_id"],
         ignore = bool(data["ignore"])

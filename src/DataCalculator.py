@@ -153,13 +153,19 @@ class DataCalculator:
 
     def calculate_opr(self, metric):
         #self.session.flush()
-        all_matches = self.data_accessor.get_all_match_objects([f"r_{metric}", f"b_{metric}"]) #getting all data 
+        all_matches = self.data_accessor.get_all_match_objects(
+            [f"r_{metric}",
+             f"b_{metric}"]
+        ) #getting all data 
+
         all_alliances = self.data_accessor.get_all_alliance()
+        
         alliance_metric_info = []
         for match in range(int(len(all_alliances)/2)):
             alliance_metric_info.append([all_alliances[match], all_matches[match][1]])
         for match in range(int(len(all_alliances)/2)):
             alliance_metric_info.append([all_alliances[int(len(all_alliances)/2) + match], all_matches[match][2]])
+        
         assembled_data = pd.DataFrame(numpy.array(alliance_metric_info), columns=['teams', 'metricdata'])
         mlb = MultiLabelBinarizer(sparse_output=True)
         sparse_teams = mlb.fit_transform(assembled_data["teams"])
@@ -167,6 +173,7 @@ class DataCalculator:
         teams_with_oprs = pd.DataFrame([mlb.classes_, oprs[0]]).transpose()
         teams_with_oprs.rename({0: "teams", 1: f"{metric}_opr"}, inplace=True, axis=1)
         teams_with_oprs.set_index("teams", inplace=True)
+        
         return teams_with_oprs
 
     def group_notes(self):
@@ -205,22 +212,28 @@ class DataCalculator:
         self.team_list = self.data_accessor.get_all_teams_df()
 
         self.log.info("Calculating averages")
-        auto_low_avg = self.calculate_team_average("auto_low_goal")
-        auto_high_avg = self.calculate_team_average("auto_high_goal")
+        auto_lower_avg = self.calculate_team_average("auto_lower_hub")
+        auto_upper_avg = self.calculate_team_average("auto_upper_hub")
         # auto_miss_avg = self.calculate_team_average("auto_misses")
-        tele_low_avg = self.calculate_team_average("teleop_low_goal")
-        tele_high_avg = self.calculate_team_average("teleop_high_goal")
+        tele_lower_avg = self.calculate_team_average("teleop_lower_hub")
+        tele_upper_avg = self.calculate_team_average("teleop_upper_hub")
         tele_miss_avg = self.calculate_team_average("teleop_misses")
-        climb_time_avg = self.calculate_team_average("climb_time")
+        low_climb_time_avg = self.calculate_team_average("low_rung_climb_time")
+        mid_climb_time_avg = self.calculate_team_average("mid_rung_climb_time")
+        high_climb_time_avg = self.calculate_team_average("high_rung_climb_time")
+        traversal_climb_time_avg = self.calculate_team_average("traversal_rung_climb_time")
 
         self.log.info("Calculating medians")
-        auto_low_med = self.calculate_team_median("auto_low_goal")
-        auto_high_med = self.calculate_team_median("auto_high_goal")
+        auto_lower_med = self.calculate_team_median("auto_lower_hub")
+        auto_upper_med = self.calculate_team_median("auto_upper_hub")
         # auto_miss_med = self.calculate_team_median("auto_misses")
-        tele_low_med = self.calculate_team_median("teleop_low_goal")
-        tele_high_med = self.calculate_team_median("teleop_high_goal")
+        tele_lower_med = self.calculate_team_median("teleop_lower_hub")
+        tele_upper_med = self.calculate_team_median("teleop_upper_hub")
         tele_miss_med = self.calculate_team_median("teleop_misses")
-        climb_time_med = self.calculate_team_median("climb_time")
+        low_climb_time_med = self.calculate_team_median("low_rung_climb_time")
+        mid_climb_time_med = self.calculate_team_median("mid_rung_climb_time")
+        high_climb_time_med = self.calculate_team_median("high_rung_climb_time")
+        traversal_climb_time_med = self.calculate_team_median("traversal_rung_climb_time")
 
         self.log.info("Calculating OPR")
         total_points_opr= self.calculate_opr("total_points")
@@ -232,21 +245,22 @@ class DataCalculator:
         self.log.info("Calculating percentages")
         shooting_zone_pct = self.calculate_team_percentages(
             [
-                "from_target_zone",
-                "from_initiation_line",
-                "from_near_trench",
-                "from_far_trench",
-                "from_rendezvous_point",
+                "from_fender",
+                "from_elsewhere_in_tarmac",
+                "from_launchpad",
+                "from_terminal",
+                "from_hangar_zone",
+                "from_elsewhere_on_field"
             ],
             replacements={True: 1, False: 0},
         )
         climb_type_pct = self.calculate_team_percentages(
             ["final_climb_type"],
             one_hot_encoded=False,
-            possible_values=[ClimbType.hang, ClimbType.park, ClimbType.no_climb],
+            possible_values=[ClimbType.traversal, ClimbType.high, ClimbType.mid, ClimbType.low, ClimbType.none],
         )
         shoot_pct = self.calculate_team_percentages_quant(
-            ["teleop_high_goal", "teleop_low_goal", "teleop_misses"]
+            ["teleop_upper_hub", "teleop_lower_hub", "teleop_misses"]
         )
 
         comments = self.group_notes()
@@ -254,33 +268,42 @@ class DataCalculator:
         self.log.info("Adding data to SQL")
         self.team_data_to_sql(
             [
-                auto_low_avg,
-                auto_high_avg,
+                auto_lower_avg,
+                auto_upper_avg,
                 #auto_miss_avg,
-                tele_low_avg,
-                tele_high_avg,
+                tele_lower_avg,
+                tele_upper_avg,
                 tele_miss_avg,
-                climb_time_avg,
-                auto_low_med,
-                auto_high_med,
-                tele_low_med,
-                tele_high_med,
+                low_climb_time_avg,
+                mid_climb_time_avg,
+                high_climb_time_avg,
+                traversal_climb_time_avg,
+                auto_lower_med,
+                auto_upper_med,
+                tele_lower_med,
+                tele_upper_med,
                 tele_miss_med,
-                climb_time_med,
+                low_climb_time_med,
+                mid_climb_time_med,
+                high_climb_time_med,
+                traversal_climb_time_med,
                 shooting_zone_pct,
                 climb_type_pct,
                 shoot_pct,
                 comments,
             ],
             {
-                "from_target_zone_pct": "from_target_zone_usage",
-                "from_initiation_line_pct": "from_initiation_line_usage",
-                "from_near_trench_pct": "from_near_trench_usage",
-                "from_far_trench_pct": "from_far_trench_usage",
-                "from_rendezvous_point_pct": "from_rendezvous_point_usage",
-                "final_climb_type_ClimbType.hang": "hang_pct",
-                "final_climb_type_ClimbType.park": "park_pct",
-                "final_climb_type_ClimbType.no_climb": "no_climb_pct",
+                "from_fender_pct": "from_fender_usage",
+                "from_elsewhere_in_tarmac_pct": "from_elsewhere_in_tarmac_usage",
+                "from_launchpad_pct": "from_launchpad_usage",
+                "from_terminal_pct": "from_terminal_usage",
+                "from_hangar_zone_pct": "from_hangar_zone_usage",
+                "from_elsewhere_on_field_pct": "from_elsewhere_on_field_usage",
+                "final_climb_type_ClimbType.traversal": "traversal_rung_pct",
+                "final_climb_type_ClimbType.high": "high_rung_pct",
+                "final_climb_type_ClimbType.mid": "mid_rung_pct",
+                "final_climb_type_ClimbType.low": "low_rung_pct",
+                "final_climb_type_ClimbType.none": "none_pct",
                 "teleop_high_goal_pct": "teleop_high_pct",
                 "teleop_low_goal_pct": "teleop_low_pct",
                 "teleop_misses_pct": "teleop_miss_pct",

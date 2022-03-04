@@ -119,19 +119,19 @@ class DataProcessor:
         self.log.info("Checking TeamData match keys")
         self.check_key("Match Key Violations", "match_id")
 
-        self.log.info("Checking for Auto Power Cell Low Goal Violations")
-        self.check_equals_by_alliance("Auto Power Cell Low Goal Violations", ["auto_low_goal"],['auto_cells_bottom'])
+        self.log.info("Checking for Auto Cargo Lower Hub Violations")
+        self.check_equals_by_alliance("Auto Cargo Lower Hub Violations", ["auto_lower_hub"], ['auto_cargo_lower_near','auto_cargo_lower_far', 'auto_cargo_lower_blue', 'auto_cargo_lower_red'])
 
-        self.log.info("Checking for Auto Power Cell High Goal Violations")
-        self.check_equals_by_alliance("Auto Power Cell High Goal Violations", ["auto_high_goal"], ['auto_cells_outer','auto_cells_inner'])
+        self.log.info("Checking for Auto Cargo Upper Hub Violations")
+        self.check_equals_by_alliance("Auto Cargo Upper Hub Violations", ["auto_upper_hub"], ['auto_cargo_upper_near','auto_cargo_upper_far', 'auto_cargo_upper_blue', 'auto_cargo_upper_red'])
 
-        self.log.info("Checking for Teleop Power Cell Low Goal Violations")
-        self.check_equals_by_alliance("Teleop Power Cell Low Goal Violations", ["teleop_low_goal"],['teleop_cells_bottom'])
+        self.log.info("Checking for Teleop Cargo Lower Hub Violations")
+        self.check_equals_by_alliance("Teleop Cargo Lower Hub Violations", ["teleop_lower_hub"],['teleop_cargo_lower_near', 'teleop_cargo_lower_far', 'teleop_cargo_lower_blue', 'teleop_cargo_lower_red'])
 
         self.log.info(
-            "Checking for Teleop Power Cell High Goal Violations"
+            "Checking for Teleop Cargo Upper Hub Violations"
         )
-        self.check_equals_by_alliance("Teleop Power Cell High Goal Violations", ["teleop_high_goal"],['teleop_cells_outer','teleop_cells_inner'])
+        self.check_equals_by_alliance("Teleop Cargo Upper Hub Violations", ["teleop_upper_hub"],['teleop_cargo_upper_near', 'teleop_cargo_upper_far', 'teleop_cargo_upper_blue', 'teleop_cargo_upper_red'])
 
         self.log.info("Checking for Endgame Status Violations")
-        self.check_same("Endgame Status Violations", "final_climb_type", ["endgame_1", "endgame_2", "endgame_3"], team_default=ClimbType.none, tba_default=ClimbType.no_climb)
+        self.check_same("Endgame Status Violations", "final_climb_type", ["endgame_1", "endgame_2", "endgame_3"], team_default=ClimbType.none, tba_default=ClimbType.none)

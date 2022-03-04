@@ -34,11 +34,24 @@ class CompLevel(enum.Enum):
     sf = "sf"
     f = "f"
 
+class Defense(enum.Enum):
+    never = "never"
+    sometimes = "sometimes"
+    most_of_the_time = "most of the time"
+    all_of_the_time = "all of the time"
+
+
+# class ClimbType(enum.Enum):
+#     hang = "hang"
+#     park = "park"
+#     no_climb = "no climb"
+#     none = "none"
 
 class ClimbType(enum.Enum):
-    hang = "hang"
-    park = "park"
-    no_climb = "no climb"
+    traversal = "traversal"
+    high = "high"
+    mid = "mid"
+    low = "low"
     none = "none"
 
 
@@ -214,34 +227,43 @@ class MatchDatum(Base):
 
     # Year specific config
 
-    r_init_line_1 = Column(String(50))
-    r_init_line_2 = Column(String(50))
-    r_init_line_3 = Column(String(50))
+    r_preloaded_cargo_robot_1 = Column(Integer)
+    r_preloaded_cargo_robot_2 = Column(Integer)
+    r_preloaded_cargo_robot_3 = Column(Integer)
+    r_taxi_robot_1 = Column(String(50))
+    r_taxi_robot_2 = Column(String(50))
+    r_taxi_robot_3 = Column(String(50))
     r_endgame_1 = Column(Enum(ClimbType))
     r_endgame_2 = Column(Enum(ClimbType))
     r_endgame_3 = Column(Enum(ClimbType))
-    r_auto_cells_bottom = Column(Integer)
-    r_auto_cells_outer = Column(Integer)
-    r_auto_cells_inner = Column(Integer)
-    r_teleop_cells_bottom = Column(Integer)
-    r_teleop_cells_outer = Column(Integer)
-    r_teleop_cells_inner = Column(Integer)
-    r_stage_1_activated = Column(Boolean)
-    r_stage_2_activated = Column(Boolean)
-    r_stage_3_activated = Column(Boolean)
-    r_stage_3_color = String(20)
-    r_endgame_level_rung = Column(String(50))
-    r_auto_init_line_points = Column(Integer)
-    r_auto_cell_points = Column(Integer)
+    r_auto_cargo_lower_near = Column(Integer)
+    r_auto_cargo_lower_far = Column(Integer)
+    r_auto_cargo_lower_blue = Column(Integer)
+    r_auto_cargo_lower_red = Column(Integer)
+    r_auto_cargo_upper_near = Column(Integer)
+    r_auto_cargo_upper_far = Column(Integer)
+    r_auto_cargo_upper_blue = Column(Integer)
+    r_auto_cargo_upper_red = Column(Integer)
+    r_auto_cargo_total = Column(Integer)
+    r_teleop_cargo_lower_near = Column(Integer)
+    r_teleop_cargo_lower_far = Column(Integer)
+    r_teleop_cargo_lower_blue = Column(Integer)
+    r_teleop_cargo_lower_red = Column(Integer)
+    r_teleop_cargo_upper_near = Column(Integer)
+    r_teleop_cargo_upper_far = Column(Integer)
+    r_teleop_cargo_upper_blue = Column(Integer)
+    r_teleop_cargo_upper_red = Column(Integer)
+    r_teleop_cargo_total = Column(Integer)
+    r_match_cargo_total = Column(Integer)
+    r_auto_taxi_points = Column(Integer)
+    r_auto_cargo_points = Column(Integer)
     r_auto_points = Column(Integer)
-    r_teleop_cell_points = Column(Integer)
-    r_control_panel_points = Column(Integer)
+    r_quintet_achieved = Column(Boolean)
+    r_teleop_cargo_points = Column(Integer)
     r_endgame_points = Column(Integer)
     r_teleop_points = Column(Integer)
-    r_shield_operational_rp = Column(Boolean)
-    r_shield_energized_rp = Column(Boolean)
-    r_shield_energized_rp_from_foul = Column(Boolean)
-    r_num_hanging = Column(Integer)
+    r_cargo_bonus_ranking_point = Column(Boolean)
+    r_hangar_bonus_ranking_point = Column(Boolean)
     r_foul_count = Column(Integer)
     r_tech_foul_count = Column(Integer)
     r_adjust_points = Column(Integer)
@@ -249,34 +271,41 @@ class MatchDatum(Base):
     r_rp = Column(Integer)
     r_total_points = Column(Integer)
 
-    b_init_line_1 = Column(String(50))
-    b_init_line_2 = Column(String(50))
-    b_init_line_3 = Column(String(50))
+    b_preloaded_cargo_robot_1 = Column(Integer)
+    b_preloaded_cargo_robot_2 = Column(Integer)
+    b_preloaded_cargo_robot_3 = Column(Integer)
+    b_taxi_robot_1 = Column(String(50))
+    b_taxi_robot_2 = Column(String(50))
+    b_taxi_robot_3 = Column(String(50))
     b_endgame_1 = Column(Enum(ClimbType))
     b_endgame_2 = Column(Enum(ClimbType))
     b_endgame_3 = Column(Enum(ClimbType))
-    b_auto_cells_bottom = Column(Integer)
-    b_auto_cells_outer = Column(Integer)
-    b_auto_cells_inner = Column(Integer)
-    b_teleop_cells_bottom = Column(Integer)
-    b_teleop_cells_outer = Column(Integer)
-    b_teleop_cells_inner = Column(Integer)
-    b_stage_1_activated = Column(Boolean)
-    b_stage_2_activated = Column(Boolean)
-    b_stage_3_activated = Column(Boolean)
-    b_stage_3_color = String(20)
-    b_endgame_level_rung = Column(String(50))
-    b_auto_init_line_points = Column(Integer)
-    b_auto_cell_points = Column(Integer)
+    b_auto_cargo_lower_near = Column(Integer)
+    b_auto_cargo_lower_far = Column(Integer)
+    b_auto_cargo_lower_blue = Column(Integer)
+    b_auto_cargo_lower_red = Column(Integer)
+    b_auto_cargo_upper_near = Column(Integer)
+    b_auto_cargo_upper_far = Column(Integer)
+    b_auto_cargo_upper_blue = Column(Integer)
+    b_auto_cargo_upper_red = Column(Integer)
+    b_teleop_cargo_lower_near = Column(Integer)
+    b_teleop_cargo_lower_far = Column(Integer)
+    b_teleop_cargo_lower_blue = Column(Integer)
+    b_teleop_cargo_lower_red = Column(Integer)
+    b_teleop_cargo_upper_near = Column(Integer)
+    b_teleop_cargo_upper_far = Column(Integer)
+    b_teleop_cargo_upper_blue = Column(Integer)
+    b_teleop_cargo_upper_red = Column(Integer)
+    b_match_cargo_total = Column(Integer)
+    b_auto_taxi_points = Column(Integer)
+    b_auto_cargo_points = Column(Integer)
     b_auto_points = Column(Integer)
-    b_teleop_cell_points = Column(Integer)
-    b_control_panel_points = Column(Integer)
+    b_quintet_achieved = Column(Boolean)
+    b_teleop_cargo_points = Column(Integer)
     b_endgame_points = Column(Integer)
     b_teleop_points = Column(Integer)
-    b_shield_operational_rp = Column(Boolean)
-    b_shield_energized_rp = Column(Boolean)
-    b_shield_energized_rp_from_foul = Column(Boolean)
-    b_num_hanging = Column(Integer)
+    b_cargo_bonus_ranking_point = Column(Boolean)
+    b_hangar_bonus_ranking_point = Column(Boolean)
     b_foul_count = Column(Integer)
     b_tech_foul_count = Column(Integer)
     b_adjust_points = Column(Integer)
@@ -303,34 +332,34 @@ class MatchDatum(Base):
                    "postResultTime": self.post_result_time,
                    "predictions": [], # TODO figure out predictions
                },
-               "Auto Inner": {
-                   "red": self.r_auto_cells_inner,
-                   "blue": self.b_auto_cells_inner
-               },
-               "Auto Outer": {
-                   "red": self.r_auto_cells_outer,
-                   "blue": self.b_auto_cells_outer
-               },
-               "Teleop Low Goal": {
-                   "red": self.r_teleop_cells_bottom,
-                   "blue": self.b_teleop_cells_bottom
-               },
-               "Teleop Outer": {
-                   "red": self.r_teleop_cells_outer,
-                   "blue": self.b_teleop_cells_outer
-               },
-               "Teleop Inner": {
-                   "red": self.r_teleop_cells_inner,
-                   "blue": self.b_teleop_cells_inner
-               },
-               "Endgame Points": {
-                   "red": self.r_endgame_points,
-                   "blue": self.b_endgame_points
-               },
-               "Number Hanging": {
-                   "red": self.r_num_hanging,
-                   "blue": self.b_num_hanging
-               },
+            #    "Auto Inner": {
+            #        "red": self.r_auto_cells_inner,
+            #        "blue": self.b_auto_cells_inner
+            #    },
+            #    "Auto Outer": {
+            #        "red": self.r_auto_cells_outer,
+            #        "blue": self.b_auto_cells_outer
+            #    },
+            #    "Teleop Low Goal": {
+            #        "red": self.r_teleop_cells_bottom,
+            #        "blue": self.b_teleop_cells_bottom
+            #    },
+            #    "Teleop Outer": {
+            #        "red": self.r_teleop_cells_outer,
+            #        "blue": self.b_teleop_cells_outer
+            #    },
+            #    "Teleop Inner": {
+            #        "red": self.r_teleop_cells_inner,
+            #        "blue": self.b_teleop_cells_inner
+            #    },
+            #    "Endgame Points": {
+            #        "red": self.r_endgame_points,
+            #        "blue": self.b_endgame_points
+            #    },
+            #    "Number Hanging": {
+            #        "red": self.r_num_hanging,
+            #        "blue": self.b_num_hanging
+            #    },
                "Foul Points": {
                    "red": self.r_foul_points,
                    "blue": self.b_foul_points
@@ -360,27 +389,29 @@ class TeamDatum(Base):
 
     # Year Specific Config
 
-    auto_low_goal = Column(Integer)
-    auto_high_goal = Column(Integer)
+    auto_lower_hub = Column(Integer)
+    auto_upper_hub = Column(Integer)
     auto_misses = Column(Integer)
     auto_notes = Column(Text)
-    teleop_low_goal = Column(Integer)
-    teleop_high_goal = Column(Integer)
+    teleop_lower_hub = Column(Integer)
+    teleop_upper_hub = Column(Integer)
     teleop_misses = Column(Integer)
     teleop_notes = Column(Text)
+    
+    from_fender = Column(Boolean)
+    from_elsewhere_in_tarmac = Column(Boolean)
+    from_launchpad = Column(Boolean)
+    from_terminal = Column(Boolean)
+    from_hangar_zone = Column(Boolean)
+    from_elsewhere_on_field = Column(Boolean)
 
-    control_panel = Column(Integer)
-
-    from_initiation_line = Column(Boolean)
-    from_target_zone = Column(Boolean)
-    from_near_trench = Column(Boolean)
-    from_rendezvous_point = Column(Boolean)
-    from_far_trench = Column(Boolean)
-
-    climb_time = Column(Integer)
-    attempted_park = Column(Boolean)
-    attempted_hang = Column(Boolean)
+    low_rung_climb_time = Column(Integer)
+    mid_rung_climb_time = Column(Integer)
+    high_rung_climb_time = Column(Integer)
+    traversal_rung_climb_time = Column(Integer)
     final_climb_type = Column(Enum(ClimbType))
+
+    defense = Column(Enum(Defense))
 
     notes = Column(Text)
 
@@ -397,37 +428,50 @@ class CalculatedTeamDatum(Base):
 
     # Year Specific Config
 
-    auto_low_goal_avg = Column(Float)
-    auto_high_goal_avg = Column(Float)
+    auto_lower_hub_avg = Column(Float)
+    auto_upper_hub_avg = Column(Float)
     auto_misses_avg = Column(Float)
-    teleop_low_goal_avg = Column(Float)
-    teleop_high_goal_avg = Column(Float)
+    teleop_lower_hub_avg = Column(Float)
+    teleop_upper_hub_avg = Column(Float)
     teleop_misses_avg = Column(Float)
     fouls_avg = Column(Float)
-    climb_time_avg = Column(Float)
+    low_rung_time_avg = Column(Float)
+    mid_rung_time_avg = Column(Float)
+    high_rung_time_avg = Column(Float)
+    traversal_rung_time_avg = Column(Float)
 
-    auto_low_goal_med = Column(Float)
-    auto_high_goal_med = Column(Float)
+    auto_lower_hub_med = Column(Float)
+    auto_upper_hub_med = Column(Float)
     auto_misses_med = Column(Float)
-    teleop_low_goal_med = Column(Float)
-    teleop_high_goal_med = Column(Float)
+    teleop_lower_hub_med = Column(Float)
+    teleop_upper_hub_med = Column(Float)
     teleop_misses_med = Column(Float)
     fouls_med = Column(Float)
-    climb_time_med = Column(Float)
+    low_rung_time_med = Column(Float)
+    mid_rung_time_med = Column(Float)
+    high_rung_time_med = Column(Float)
+    traversal_rung_time_med = Column(Float)
 
-    from_target_zone_usage = Column(Float)
-    from_initiation_line_usage = Column(Float)
-    from_near_trench_usage = Column(Float)
-    from_far_trench_usage = Column(Float)
-    from_rendezvous_point_usage = Column(Float)
+    from_fender_usage = Column(Integer)
+    from_elsewhere_in_tarmac_usage = Column(Integer)
+    from_launchpad_usage = Column(Integer)
+    from_terminal_usage = Column(Integer)
+    from_hangar_zone_usage = Column(Integer)
+    from_elsewhere_on_field_usage = Column(Integer)
 
-    hang_pct = Column(Float)
-    park_pct = Column(Float)
-    no_climb_pct = Column(Float)
+    none_pct = Column(Float)
+    low_rung_pct = Column(Float)
+    mid_rung_pct = Column(Float)
+    high_rung_pct = Column(Float)
+    traversal_rung_pct = Column(Float)
 
-    teleop_high_pct = Column(Float)
-    teleop_low_pct = Column(Float)
+    auto_upper_pct = Column(Float)
+    auto_lower_pct = Column(Float)
+    auto_miss_pct = Column(Float)
+    teleop_upper_pct = Column(Float)
+    teleop_lower_pct = Column(Float)
     teleop_miss_pct = Column(Float)
+    
 
     comments = Column(Text)
 
@@ -437,35 +481,41 @@ class CalculatedTeamDatum(Base):
        return {
            self.team_id[3:] : {
                "accuracy": {
-                   "high": self.teleop_high_pct,
-                   "low": self.teleop_low_pct,
+                   "high": self.teleop_upper_pct,
+                   "low": self.teleop_lower_pct,
                    "miss": self.teleop_miss_pct
                },
                "auto": {
-                   "high_goal": self.auto_high_goal_avg,
-                   "low_goal": self.auto_low_goal_avg,
+                   "high_goal": self.auto_upper_hub_avg,
+                   "low_goal": self.auto_lower_hub_avg,
                    "misses": self.auto_misses_avg,
                },
                "climb": {
-                   "hang": self.hang_pct,
-                   "no_climb": self.no_climb_pct,
-                   "park": self.park_pct
+                   "traversal": self.traversal_rung_pct,
+                   "high": self.high_rung_pct,
+                   "mid": self.mid_rung_pct,
+                   "low": self.low_rung_pct,
+                   "none": self.none_pct
                },
                "misc": {
-                   "climb_time": self.climb_time_avg,
+                   "low_rung_climb_time": self.low_rung_time_avg,
+                   "mid_rung_climb_time": self.mid_rung_climb_time,
+                   "high_rung_climb_time": self.high_rung_climb_time,
+                   "traversal_rung_climb_time": self.traversal_rung_climb_time,
                    "fouls": self.fouls_avg
                },
                "teleop": {
-                   "high_goal": self.teleop_high_goal_avg,
-                   "low_goal": self.teleop_low_goal_avg,
+                   "upper_hub": self.teleop_upper_hub_avg,
+                   "lower_hub": self.teleop_lower_hub_avg,
                    "misses": self.teleop_misses_avg
                },
                "zones": {
-                   "far_trench": self.from_far_trench_usage,
-                   "initiation_line": self.from_initiation_line_usage,
-                   "near_trench": self.from_near_trench_usage,
-                   "rendezvous_point": self.from_rendezvous_point_usage,
-                   "target_zone": self.from_target_zone_usage
+                   "fender": self.from_fender_usage,
+                   "elsewhere_in_tarmac": self.from_elsewhere_in_tarmac_usage,
+                   "launchpad": self.from_launchpad_usage,
+                   "terminal": self.from_terminal_usage,
+                   "hangar_zone": self.from_hangar_zone_usage,
+                   "elsewhere_on_field": self.from_elsewhere_on_field_usage
                },
                "next_matches": [
                    
@@ -487,32 +537,36 @@ def flatten_json(json):
             flat[key] = value
     return flat
 
-
+# TODO do both of these
 match_data_map = {
-    "init_line_1": "initLineRobot1",
-    "init_line_2": "initLineRobot2",
-    "init_line_3": "initLineRobot3",
-    "auto_cells_bottom": "autoCellsBottom",
-    "auto_cells_outer": "autoCellsOuter",
-    "auto_cells_inner": "autoCellsInner",
-    "teleop_cells_bottom": "teleopCellsBottom",
-    "teleop_cells_outer": "teleopCellsOuter",
-    "teleop_cells_inner": "teleopCellsInner",
-    "stage_1_activated": "stage1Activated",
-    "stage_2_activated": "stage2Activated",
-    "stage_3_activated": "stage3Activated",
-    "endgame_level_rung": "endgameRungIsLevel",
-    "auto_init_line_points": "autoInitLinePoints",
-    "auto_cell_points": "autoInitLinePoints",
-    "auto_points": "autoInitLinePoints",
-    "teleop_cell_points": "autoInitLinePoints",
-    "control_panel_points": "controlPanelPoints",
-    "engdame_points": "autoInitLinePoints",
+    "auto_cargo_lower_near": "autoCargoLowerNear",
+    "auto_cargo_lower_far": "autoCargoLowerFar",
+    "auto_cargo_lower_blue": "autoCargoLowerBlue",
+    "auto_cargo_lower_red": "autoCargoLowerRed",
+    "auto_cargo_upper_near": "autoCargoUpperNear",
+    "auto_cargo_upper_far": "autoCargoUpperFar",
+    "auto_cargo_upper_blue": "autoCargoUpperBlue",
+    "auto_cargo_upper_red": "autoCargoUpperRed",
+    "auto_cargo_total": "autoCargoTotal",
+    "teleop_cargo_lower_near": "teleopCargoLowerNear",
+    "teleop_cargo_lower_far": "teleopCargoLowerFar",
+    "teleop_cargo_lower_blue": "teleopCargoLowerBlue",
+    "teleop_cargo_lower_red": "teleopCargoLowerRed",
+    "teleop_cargo_upper_near": "teleopCargoUpperNear",
+    "teleop_cargo_upper_far": "teleopCargoUpperFar",
+    "teleop_cargo_upper_blue": "teleopCargoUpperBlue",
+    "teleop_cargo_upper_red": "teleopCargoUpperRed",
+    "teleop_cargo_total": "teleopCargoTotal",
+    "match_cargo_total": "matchCargoTotal",
+    "auto_taxi_points": "autoTaxiPoints",
+    "auto_cargo_points": "autoCargoPoints",
+    "auto_points": "autoPoints",
+    "quintet_achieved": "quintetAchieved",
+    "teleop_cargo_points": "teleopCargoPoints",
+    "endgame_points": "endgamePoints",
     "teleop_points": "teleopPoints",
-    "shield_operation_rp": "shieldOperationalRankingPoint",
-    "shield_energized_rp": "shieldEnergizedRankingPoint",
-    "shield_energized_rp_from_foul": "tba_shieldEnergizedRankingPointFromFoul",
-    "num_hanging": "tba_numRobotsHanging",
+    "cargo_bonus_ranking_point": "cargoBonusRankingPoint",
+    "hangar_bonus_ranking_point": "hangarBonusRankingPoint",
     "foul_count": "foulCount",
     "tech_foul_count": "techFoulCount",
     "adjust_points": "adjustPoints",
@@ -522,23 +576,24 @@ match_data_map = {
 }
 
 team_data_map = {
-    "auto_low_goal": "Auto Low Goal",
-    "auto_high_goal": "Auto High Goal",
-    # "auto_misses": "Auto Misses",
-    # "auto_notes": "Auto Notes",
-    "teleop_low_goal": "Teleop Low Goal",
-    "teleop_high_goal": "Teleop High Goal",
+    "auto_lower_hub": "Auto Lower Hub",
+    "auto_upper_hub": "Auto Upper Hub",
+    "auto_misses": "Auto Misses",
+    "auto_notes": "Auto Notes",
+    "teleop_lower_hub": "Teleop Lower Hub",
+    "teleop_upper_hub": "Teleop Upper Hub",
     "teleop_misses": "Teleop Misses",
-    # "teleop_notes": "Teleop Notes",
-    "control_panel": "Control Panel",
-    "from_initiation_line": "Initiation Line?",
-    "from_target_zone": "Target Zone?",
-    "from_near_trench": "Near Trench?",
-    "from_far_trench": "Far Trench",
-    "from_rendezvous_point": "Rendezvous point?",
-    "climb_time": "Climb Time",
-    #"attempted_park": "Attempted Park",
-    "attempted_hang": "Climb Attempted",
-    # "final_climb_type": "Final Climb Type",
+    "teleop_notes": "Teleop Notes",
+    "from_fender": "Fender?",
+    "from_elsewhere_in_tarmac": "Elsewhere in Tarmac?",
+    "from_launchpad": "Launchpad?",
+    "from_terminal": "Terminal",
+    "from_hangar_zone": "Hangar Zone?",
+    "from_elsewhere_on_field": "Elsewhere on Field?",
+    "low_rung_climb_time": "Low Rung Climb Time",
+    "mid_rung_climb_time": "Mid Rung Climb Time",
+    "high_rung_climb_time": "High Rung Climb Time",
+    "traversal_rung_climb_time": "Traversal Rung Climb Time",
+    "final_climb_type": "Final Climb Type",
     "notes": "Notes",
 }

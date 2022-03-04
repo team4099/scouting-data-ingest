@@ -372,7 +372,7 @@ class DataAccessor:
 
         def climb_tf(climb):
             if climb == ClimbType.none:
-                return ClimbType.no_climb
+                return ClimbType.none
             return climb
 
         new_vars["r_endgame_1"] = climb_tf(ClimbType(match_json["score_breakdown.red.endgameRobot1"].lower()))
