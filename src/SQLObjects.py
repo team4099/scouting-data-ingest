@@ -332,34 +332,26 @@ class MatchDatum(Base):
                    "postResultTime": self.post_result_time,
                    "predictions": [], # TODO figure out predictions
                },
-            #    "Auto Inner": {
-            #        "red": self.r_auto_cells_inner,
-            #        "blue": self.b_auto_cells_inner
-            #    },
-            #    "Auto Outer": {
-            #        "red": self.r_auto_cells_outer,
-            #        "blue": self.b_auto_cells_outer
-            #    },
-            #    "Teleop Low Goal": {
-            #        "red": self.r_teleop_cells_bottom,
-            #        "blue": self.b_teleop_cells_bottom
-            #    },
-            #    "Teleop Outer": {
-            #        "red": self.r_teleop_cells_outer,
-            #        "blue": self.b_teleop_cells_outer
-            #    },
-            #    "Teleop Inner": {
-            #        "red": self.r_teleop_cells_inner,
-            #        "blue": self.b_teleop_cells_inner
-            #    },
-            #    "Endgame Points": {
-            #        "red": self.r_endgame_points,
-            #        "blue": self.b_endgame_points
-            #    },
-            #    "Number Hanging": {
-            #        "red": self.r_num_hanging,
-            #        "blue": self.b_num_hanging
-            #    },
+                "Auto Low Cargo": {
+                    "red": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.r_auto_cargo_lower_red,
+                    "rlue": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.b_auto_cargo_lower_red
+                },
+                "Auto Upper Cargo": {
+                    "red": self.r_auto_cargo_upper_near + self.r_auto_cargo_upper_far +self.r_auto_cargo_upper_blue +self.r_auto_cargo_upper_red,
+                    "blue": self.b_auto_cargo_upper_near + self.b_auto_cargo_upper_far +self.b_auto_cargo_upper_blue +self.b_auto_cargo_upper_red
+                },
+                "Teleop Low Cargo": {
+                    "red": self.r_teleop_cargo_lower_near + self.r_teleop_cargo_lower_far +self.r_teleop_cargo_lower_blue +self.r_teleop_cargo_lower_red,
+                    "blue": self.b_teleop_cargo_lower_near + self.b_teleop_cargo_lower_far +self.b_teleop_cargo_lower_blue +self.b_teleop_cargo_lower_red
+                },
+                "Teleop Upper Cargo": {
+                    "red": self.r_teleop_cargo_upper_near + self.r_teleop_cargo_upper_far +self.r_teleop_cargo_upper_blue +self.r_teleop_cargo_upper_red,
+                    "blue": self.b_teleop_cargo_upper_near + self.b_teleop_cargo_upper_far +self.b_teleop_cargo_upper_blue +self.b_teleop_cargo_upper_red
+                },
+                "Endgame Points": {
+                    "red": self.r_endgame_points,
+                    "blue": self.b_endgame_points
+                },
                "Foul Points": {
                    "red": self.r_foul_points,
                    "blue": self.b_foul_points
@@ -388,11 +380,22 @@ class TeamDatum(Base):
     driver_station = Column(Integer)
 
     # Year Specific Config
-
+    
+    preloaded_cargo = Column(Boolean)
     auto_lower_hub = Column(Integer)
     auto_upper_hub = Column(Integer)
     auto_misses = Column(Integer)
+    auto_human_scores = Column(Integer)
+    auto_human_misses = Column(Integer)
+    taxied = Column(Boolean)
+    auto_from_fender = Column(Boolean)
+    auto_from_elsewhere_in_tarmac = Column(Boolean)
+    auto_from_launchpad = Column(Boolean)
+    auto_from_terminal = Column(Boolean)
+    auto_from_hangar_zone = Column(Boolean)
+    auto_from_elsewhere_on_field = Column(Boolean)
     auto_notes = Column(Text)
+
     teleop_lower_hub = Column(Integer)
     teleop_upper_hub = Column(Integer)
     teleop_misses = Column(Integer)
@@ -405,9 +408,13 @@ class TeamDatum(Base):
     from_hangar_zone = Column(Boolean)
     from_elsewhere_on_field = Column(Boolean)
 
+    attempted_low = Column(Boolean)
     low_rung_climb_time = Column(Integer)
+    attempted_mid = Column(Boolean)
     mid_rung_climb_time = Column(Integer)
+    attempted_high = Column(Boolean)
     high_rung_climb_time = Column(Integer)
+    attempted_traversal = Column(Boolean)
     traversal_rung_climb_time = Column(Integer)
     final_climb_type = Column(Enum(ClimbType))
 
@@ -459,6 +466,18 @@ class CalculatedTeamDatum(Base):
     from_hangar_zone_usage = Column(Integer)
     from_elsewhere_on_field_usage = Column(Integer)
 
+    auto_from_fender_usage = Column(Integer)
+    auto_from_elsewhere_in_tarmac_usage = Column(Integer)
+    auto_from_launchpad_usage = Column(Integer)
+    auto_from_terminal_usage = Column(Integer)
+    auto_from_hangar_zone_usage = Column(Integer)
+    auto_from_elsewhere_on_field_usage = Column(Integer)
+
+    attempted_low_usage = Column(Integer)
+    attempted_mid_usage = Column(Integer)
+    attempted_high_usage = Column(Integer)
+    attempted_traversal_usage = Column(Integer)
+
     none_pct = Column(Float)
     low_rung_pct = Column(Float)
     mid_rung_pct = Column(Float)
@@ -481,13 +500,13 @@ class CalculatedTeamDatum(Base):
        return {
            self.team_id[3:] : {
                "accuracy": {
-                   "high": self.teleop_upper_pct,
-                   "low": self.teleop_lower_pct,
+                   "upper": self.teleop_upper_pct,
+                   "lower": self.teleop_lower_pct,
                    "miss": self.teleop_miss_pct
                },
                "auto": {
-                   "high_goal": self.auto_upper_hub_avg,
-                   "low_goal": self.auto_lower_hub_avg,
+                   "upper": self.auto_upper_hub_avg,
+                   "lower": self.auto_lower_hub_avg,
                    "misses": self.auto_misses_avg,
                },
                "climb": {
@@ -495,18 +514,27 @@ class CalculatedTeamDatum(Base):
                    "high": self.high_rung_pct,
                    "mid": self.mid_rung_pct,
                    "low": self.low_rung_pct,
-                   "none": self.none_pct
+                   "no_climb": self.none_pct
                },
-               "misc": {
-                   "low_rung_climb_time": self.low_rung_time_avg,
+               "climb_time" :{
+                    "low_rung_climb_time": self.low_rung_time_avg,
                    "mid_rung_climb_time": self.mid_rung_climb_time,
                    "high_rung_climb_time": self.high_rung_climb_time,
                    "traversal_rung_climb_time": self.traversal_rung_climb_time,
+                   
+               },
+               "attempted_climbs": {
+                "attempted_low_usage": self.attempted_low_usage,
+                "attempted_mid_usage":self.attempted_mid_usage,
+                "attempted_high_usage":self.attempted_high_usage,
+                "attempted_traversal_usage":self.attempted_traversal_usage
+               },
+               "misc": {
                    "fouls": self.fouls_avg
                },
                "teleop": {
-                   "upper_hub": self.teleop_upper_hub_avg,
-                   "lower_hub": self.teleop_lower_hub_avg,
+                   "upper": self.teleop_upper_hub_avg,
+                   "lower": self.teleop_lower_hub_avg,
                    "misses": self.teleop_misses_avg
                },
                "zones": {
@@ -515,7 +543,7 @@ class CalculatedTeamDatum(Base):
                    "launchpad": self.from_launchpad_usage,
                    "terminal": self.from_terminal_usage,
                    "hangar_zone": self.from_hangar_zone_usage,
-                   "elsewhere_on_field": self.from_elsewhere_on_field_usage
+                   "elsewhere": self.from_elsewhere_on_field_usage
                },
                "next_matches": [
                    

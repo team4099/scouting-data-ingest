@@ -58,6 +58,33 @@ class DataCalculator:
         team_data_average = team_data_average.rename(columns={col: col + "_avg"})
         return team_data_average.set_index("id")
 
+    def calculate_team_average_filter(self, col, filter_col):
+        """
+
+        Calculates an average by team for a metric.
+
+        :param col: A metric column from TeamData.
+        :type col: str
+        :return: A Dataframe of averages
+        :rtype: pandas.DataFrame
+        """
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]].dropna()
+        if (len(team_data.index)) > 0:
+            team_data_average = self.team_list.merge(
+                team_data[team_data[filter_col]].groupby("team_id").mean(),
+                how="outer",
+                left_on="id",
+                right_index=True,
+            )
+        else:
+            team_data_average = self.team_list.merge(
+                team_data, how="outer", left_on="team_id", right_index=True
+            ).drop(columns=["id"])
+        team_data_average = team_data_average.rename(columns={col: col + "_avg"})
+        return team_data_average.set_index("id")
+
+
+
     def calculate_team_median(self, col):
         """
 
@@ -214,14 +241,14 @@ class DataCalculator:
         self.log.info("Calculating averages")
         auto_lower_avg = self.calculate_team_average("auto_lower_hub")
         auto_upper_avg = self.calculate_team_average("auto_upper_hub")
-        # auto_miss_avg = self.calculate_team_average("auto_misses")
+        auto_miss_avg = self.calculate_team_average("auto_misses")
         tele_lower_avg = self.calculate_team_average("teleop_lower_hub")
         tele_upper_avg = self.calculate_team_average("teleop_upper_hub")
         tele_miss_avg = self.calculate_team_average("teleop_misses")
-        low_climb_time_avg = self.calculate_team_average("low_rung_climb_time")
-        mid_climb_time_avg = self.calculate_team_average("mid_rung_climb_time")
-        high_climb_time_avg = self.calculate_team_average("high_rung_climb_time")
-        traversal_climb_time_avg = self.calculate_team_average("traversal_rung_climb_time")
+        low_climb_time_avg = self.calculate_team_average_filter("low_rung_climb_time","attempted_low")
+        mid_climb_time_avg = self.calculate_team_average_filter("mid_rung_climb_time","attempted_mid")
+        high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
+        traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
 
         self.log.info("Calculating medians")
         auto_lower_med = self.calculate_team_median("auto_lower_hub")
@@ -230,10 +257,10 @@ class DataCalculator:
         tele_lower_med = self.calculate_team_median("teleop_lower_hub")
         tele_upper_med = self.calculate_team_median("teleop_upper_hub")
         tele_miss_med = self.calculate_team_median("teleop_misses")
-        low_climb_time_med = self.calculate_team_median("low_rung_climb_time")
-        mid_climb_time_med = self.calculate_team_median("mid_rung_climb_time")
-        high_climb_time_med = self.calculate_team_median("high_rung_climb_time")
-        traversal_climb_time_med = self.calculate_team_median("traversal_rung_climb_time")
+        low_climb_time_med = self.calculate_team_median_filter("low_rung_climb_time", 'attempted_low')
+        mid_climb_time_med = self.calculate_team_median_filter("mid_rung_climb_time", "attempted_mid")
+        high_climb_time_med = self.calculate_team_median_filter("high_rung_climb_time", "attempted_high")
+        traversal_climb_time_med = self.calculate_team_median_filter("traversal_rung_climb_time", "attempted_traversal")
 
         self.log.info("Calculating OPR")
         total_points_opr= self.calculate_opr("total_points")
@@ -251,6 +278,26 @@ class DataCalculator:
                 "from_terminal",
                 "from_hangar_zone",
                 "from_elsewhere_on_field"
+            ],
+            replacements={True: 1, False: 0},
+        )
+        auto_shooting_zone_pct = self.calculate_team_percentages(
+            [
+                "auto_from_fender",
+                "auto_from_elsewhere_in_tarmac",
+                "auto_from_launchpad",
+                "auto_from_terminal",
+                "auto_from_hangar_zone",
+                "auto_from_elsewhere_on_field"
+            ],
+            replacements={True: 1, False: 0},
+        )
+        attempted_climbs_pct = self.calculate_team_percentages(
+            [
+                "attempted_low",
+                "attempted_mid",
+                "attempted_high",
+                "attempted_traversal"
             ],
             replacements={True: 1, False: 0},
         )
@@ -288,6 +335,8 @@ class DataCalculator:
                 high_climb_time_med,
                 traversal_climb_time_med,
                 shooting_zone_pct,
+                auto_shooting_zone_pct,
+                attempted_climbs_pct,
                 climb_type_pct,
                 shoot_pct,
                 comments,
