@@ -65,13 +65,13 @@ class DataInput:
         self.last_tba_match = None
 
         # Object to represent worksheet
-        gc = gspread.service_account(f"./config/{self.config.google_credentials}")
-        if self.config.simulation:
-            self.sheet = gc.open(f"{self.config.simulator_spreadsheet}").get_worksheet(
-                0
-            )
-        else:
-            self.sheet = gc.open(f"{self.config.spreadsheet}").get_worksheet(0)
+        #gc = gspread.service_account(f"./config/{self.config.google_credentials}")
+        #if self.config.simulation:
+        #    self.sheet = gc.open(f"{self.config.simulator_spreadsheet}").get_worksheet(
+        #        0
+        #    )
+        #else:
+        #    self.sheet = gc.open(f"{self.config.spreadsheet}").get_worksheet(0)
 
         self.log.info("Loading matches and teams")
         self.load_matches_and_teams()

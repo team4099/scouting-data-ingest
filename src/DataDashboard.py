@@ -21,12 +21,14 @@ from DataAccessor import DataAccessor
 from loguru import logger
 import json
 from SQLObjects import Alliance, Base
+from flask_cors import CORS
+from waitress import serve
 
 # send help I don't know how to organize a flask application
 
 app = Flask(__name__)
+CORS(app)
 app.config["SECRET_KEY"] = "Team4099!"
-app.debug = True
 config = Config(logger, False)
 
 
@@ -247,4 +249,4 @@ def change_scout():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port="5001")
+    serve(app,host="0.0.0.0", port="5001")

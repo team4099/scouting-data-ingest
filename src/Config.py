@@ -86,39 +86,39 @@ class Config:
             )
             return False
 
-        if self.google_credentials is None:
-            self.log.error(
-                "You are missing the Google-Credentials field. Please check https://github.com/team4099/scouting-data-ingest#google-service-account-credentials-file for more information."
-            )
-            return False
-        elif not os.path.isfile(f"config/{self.google_credentials}"):
-            self.log.error(
-                "The file listed in the Google-Credentials field does not exist in the config folder. Please place it inside the config folder."
-            )
-            return False
-        else:
-            try:
-                gc = gspread.service_account(f"./config/{self.google_credentials}")
-            except ValueError as e:
-                self.log.error(
-                    "The file listed in the Google-Credentials Field is improper. See below for details."
-                )
-                self.log.error(e)
-                return False
+        #if self.google_credentials is None:
+        #    self.log.error(
+        #        "You are missing the Google-Credentials field. Please check https://github.com/team4099/scouting-data-ingest#google-service-account-credentials-file for more information."
+        #    )
+        #    return False
+        #elif not os.path.isfile(f"config/{self.google_credentials}"):
+        #    self.log.error(
+        #        "The file listed in the Google-Credentials field does not exist in the config folder. Please place it inside the config folder."
+        #    )
+        #    return False
+        #else:
+        #    try:
+        #        gc = gspread.service_account(f"./config/{self.google_credentials}")
+        #    except ValueError as e:
+        #        self.log.error(
+        #            "The file listed in the Google-Credentials Field is improper. See below for details."
+        #        )
+        #        self.log.error(e)
+        #        return False
 
-        if self.spreadsheet is None:
-            self.log.error(
-                "You are missing the Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
-            )
-            return False
-        else:
-            try:
-                gc.open(f"{self.spreadsheet}").get_worksheet(0)
-            except gspread.exceptions.SpreadsheetNotFound:
-                self.log.error(
-                    "The file listed in the Spreadsheets field has not been shared with the service account. Please make sure it is."
-                )
-                return False
+        #if self.spreadsheet is None:
+        #    self.log.error(
+        #        "You are missing the Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
+        #    )
+        #    return False
+        #else:
+        #    try:
+        #        gc.open(f"{self.spreadsheet}").get_worksheet(0)
+        #    except gspread.exceptions.SpreadsheetNotFound:
+        #        self.log.error(
+        #            "The file listed in the Spreadsheets field has not been shared with the service account. Please make sure it is."
+        #        )
+        #        return False
 
         if self.db_user is None:
             self.log.error(
@@ -186,18 +186,18 @@ class Config:
                 )
                 return False
 
-            if self.simulator_spreadsheet is None:
-                self.log.error(
-                    "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
-                )
-                return False
-            else:
-                try:
-                    gc.open(f"{self.simulator_spreadsheet}").get_worksheet(0)
-                except gspread.exceptions.SpreadsheetNotFound:
-                    self.log.error(
-                        "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."
-                    )
-                    return False
+            #if self.simulator_spreadsheet is None:
+            #    self.log.error(
+            #        "You are missing the Simulator Spreadsheet field. Please check https://github.com/team4099/scouting-data-ingest#spreadsheet for more information."
+            #    )
+            #    return False
+            #else:
+            #    try:
+            #        gc.open(f"{self.simulator_spreadsheet}").get_worksheet(0)
+            #    except gspread.exceptions.SpreadsheetNotFound:
+            #        self.log.error(
+            #            "The file listed in the Simulator Spreadsheet field has not been shared with the service account. Please make sure it is. Please also make sure the name entered is correct."
+            #        )
+            #        return False
 
         return True
