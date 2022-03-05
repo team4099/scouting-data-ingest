@@ -363,9 +363,9 @@ class DataAccessor:
         new_vars["actual_time"] = datetime.fromtimestamp(
             match_json["actual_time"], pytz.utc
         )
-        new_vars["predicted_time"] = datetime.fromtimestamp(
-            match_json["predicted_time"], pytz.utc
-        )
+        #new_vars["predicted_time"] = datetime.fromtimestamp(
+        #    match_json["predicted_time"], pytz.utc
+        #)
         new_vars["post_result_time"] = datetime.fromtimestamp(
             match_json["post_result_time"], pytz.utc
         )
@@ -415,45 +415,40 @@ class DataAccessor:
     def add_team_datum(
         self,
         team_id: str,
-        # scout_id: str,
+        scout_id: str,
         match_id: str,
         alliance: Alliance,
         driver_station: int,
         team_datum_json: dict,
     ) -> None:
         if (
-           self.get_team(team_id) is None
-           or self.get_team_data(match_id=match_id, team_id=team_id, alliance=alliance)
+           self.get_team(team_id) is None or 
+           self.get_team_data(match_id=match_id, team_id=team_id, alliance=alliance)
            != []
         ):
-           return None
+            return None
+
+        if self.get_scouts(scout_id) == []:
+            self.add_scout(scout_id)
+            self.session.flush()
 
         new_vars = {}
         td = TeamDatum(
             match_id=match_id,
+            scout_id=scout_id,
             team_id=team_id,
             alliance=alliance,
             driver_station=driver_station,
         )
 
-        new_vars["time"] = datetime.strptime(
-            team_datum_json["Timestamp"], "%m/%d/%Y %H:%M:%S"
-        ).replace(tzinfo=pytz.timezone("America/New_York"))
+        
+        new_vars["final_climb_type"] = ClimbType(team_datum_json["final_climb_type"].lower())
 
-        if type(team_datum_json["Climb Type"]) != Null:
-            new_vars["final_climb_type"] = ClimbType(
-                team_datum_json["Climb Type"].lower()
-            )
-
-        # Dynamically set Year specific items
-        for key, value in team_data_map.items():
-            new_vars[key] = team_datum_json[value]
-
-            td.__dict__.update(new_vars)
+        td.__dict__.update(team_datum_json)
 
         self.session.add(td)
-        self.session.flush()
         self.session.commit()
+
 
     def add_calculated_team_datum(self, team_id: str, calculated_team_datum_json: dict):
         if self.get_team(team_id) is None:

@@ -43,7 +43,7 @@ class DataCalculator:
         :return: A Dataframe of averages
         :rtype: pandas.DataFrame
         """
-        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]].dropna()
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]]
         if (len(team_data.index)) > 0:
             team_data_average = self.team_list.merge(
                 team_data.groupby("team_id").mean(),
@@ -68,14 +68,14 @@ class DataCalculator:
         :return: A Dataframe of averages
         :rtype: pandas.DataFrame
         """
-        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col]].dropna()
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col, filter_col]].dropna()
         if (len(team_data.index)) > 0:
             team_data_average = self.team_list.merge(
                 team_data[team_data[filter_col]].groupby("team_id").mean(),
                 how="outer",
                 left_on="id",
                 right_index=True,
-            )
+            ).drop(columns=[filter_col])
         else:
             team_data_average = self.team_list.merge(
                 team_data, how="outer", left_on="team_id", right_index=True
@@ -107,6 +107,31 @@ class DataCalculator:
             team_data_average = self.team_list.merge(
                 team_data, how="outer", left_on="team_id", right_index=True
             ).drop(columns=["id"])
+        team_data_average = team_data_average.rename(columns={col: col + "_med"})
+        return team_data_average.set_index("id")
+    
+    def calculate_team_median_filter(self, col, filter_col):
+        """
+
+        Calculates an median by team for a metric.
+
+        :param col: A metric column from TeamData.
+        :type col: str
+        :return: A Dataframe of medians
+        :rtype: pandas.DataFrame
+        """
+        team_data = self.data_accessor.get_all_team_data_df()[["team_id", col, filter_col]].dropna()
+        if (len(team_data.index)) > 0:
+            team_data_average = self.team_list.merge(
+                team_data[team_data[filter_col]].groupby("team_id").median(),
+                how="outer",
+                left_on="id",
+                right_index=True,
+            ).drop(columns=[filter_col])
+        else:
+            team_data_average = self.team_list.merge(
+                team_data, how="outer", left_on="team_id", right_index=True
+            ).drop(columns=["id",filter_col])
         team_data_average = team_data_average.rename(columns={col: col + "_med"})
         return team_data_average.set_index("id")
 
@@ -238,6 +263,9 @@ class DataCalculator:
         self.log.info("Getting a team list")
         self.team_list = self.data_accessor.get_all_teams_df()
 
+        if len(self.data_accessor.get_all_team_data_df().index) == 0:
+            return
+
         self.log.info("Calculating averages")
         auto_lower_avg = self.calculate_team_average("auto_lower_hub")
         auto_upper_avg = self.calculate_team_average("auto_upper_hub")
@@ -253,7 +281,7 @@ class DataCalculator:
         self.log.info("Calculating medians")
         auto_lower_med = self.calculate_team_median("auto_lower_hub")
         auto_upper_med = self.calculate_team_median("auto_upper_hub")
-        # auto_miss_med = self.calculate_team_median("auto_misses")
+        auto_miss_med = self.calculate_team_median("auto_misses")
         tele_lower_med = self.calculate_team_median("teleop_lower_hub")
         tele_upper_med = self.calculate_team_median("teleop_upper_hub")
         tele_miss_med = self.calculate_team_median("teleop_misses")
@@ -317,7 +345,7 @@ class DataCalculator:
             [
                 auto_lower_avg,
                 auto_upper_avg,
-                #auto_miss_avg,
+                auto_miss_avg,
                 tele_lower_avg,
                 tele_upper_avg,
                 tele_miss_avg,
@@ -327,6 +355,7 @@ class DataCalculator:
                 traversal_climb_time_avg,
                 auto_lower_med,
                 auto_upper_med,
+                auto_miss_med,
                 tele_lower_med,
                 tele_upper_med,
                 tele_miss_med,
@@ -348,6 +377,16 @@ class DataCalculator:
                 "from_terminal_pct": "from_terminal_usage",
                 "from_hangar_zone_pct": "from_hangar_zone_usage",
                 "from_elsewhere_on_field_pct": "from_elsewhere_on_field_usage",
+                "auto_from_fender_pct": "auto_from_fender_usage",
+                "auto_from_elsewhere_in_tarmac_pct": "auto_from_elsewhere_in_tarmac_usage",
+                "auto_from_launchpad_pct": "auto_from_launchpad_usage",
+                "auto_from_terminal_pct": "auto_from_terminal_usage",
+                "auto_from_hangar_zone_pct": "auto_from_hangar_zone_usage",
+                "auto_from_elsewhere_on_field_pct": "auto_from_elsewhere_on_field_usage",
+                "attempted_low_pct": "attempted_low_usage",
+                "attempted_mid_pct":"attempted_mid_usage",
+                "attempted_high_pct": "attempted_high_usage",
+                "attempted_traversal_pct": "attempted_traversal_usage",
                 "final_climb_type_ClimbType.traversal": "traversal_rung_pct",
                 "final_climb_type_ClimbType.high": "high_rung_pct",
                 "final_climb_type_ClimbType.mid": "mid_rung_pct",

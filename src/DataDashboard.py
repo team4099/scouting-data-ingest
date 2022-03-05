@@ -3,7 +3,6 @@ import itertools
 from flask import Flask, render_template, jsonify
 from flask.globals import request
 import re
-from DataInput import DataInput
 from DataCalculator import DataCalculator
 import pandas as pd
 from sqlalchemy import (
@@ -33,7 +32,7 @@ config = Config(logger, False)
 
 def update_data_accessor(data_accessor=None):
     engine = create_engine(
-        f"mysql+pymysql://{config.db_user}:{config.db_pwd}@db/scouting"
+        f"mysql+pymysql://{config.db_user}:{config.db_pwd}@{config.db_host}/scouting"
     )
     session_template = sessionmaker()
     session_template.configure(bind=engine)
@@ -47,13 +46,12 @@ def update_data_accessor(data_accessor=None):
     return data_accessor
 
 
-engine = create_engine(f"mysql+pymysql://{config.db_user}:{config.db_pwd}@db/scouting")
+engine = create_engine(f"mysql+pymysql://{config.db_user}:{config.db_pwd}@{config.db_host}/scouting")
 session_template = sessionmaker()
 session_template.configure(bind=engine)
 session = session_template()
 connection = engine.connect()
 data_accessor = DataAccessor(engine, session, connection, config)
-data_input = DataInput(engine, session, connection, data_accessor, config)
 calculated_team_data_object = None
 alliance_info = data_accessor.get_alliance_associations(json=True)
 
@@ -162,7 +160,8 @@ def get_team_datum(teamid):
 # TODO write documentation on the correct POST request format :///
 @app.route("/api/add_team_datum", methods=["POST"])
 def add_team_datum():
-    data = request.args
+    data_accessor.session.commit()
+    data = request.json
     # Year specific config
 
     climb_type_map = {
@@ -173,15 +172,19 @@ def add_team_datum():
         "4": "traversal"
     }
     data_accessor.add_team_datum(
-        team_id = "frc" + data.get("team_number"),
-        # scout_id = data["scout_id"],
+        team_id =  str(data.get("team_number")),
+        scout_id = data.get("scout_id"),
         match_id = data.get("match_key"),
         alliance = Alliance.red if data.get("alliance") == "red" else Alliance.blue,
         driver_station = data.get("driver_station"),
         team_datum_json = {
+            "preloaded_cargo": bool(data.get("preloaded_cargo")),
             "auto_lower_hub": data.get("auto_lower_hub"),
             "auto_upper_hub": data.get("auto_upper_hub"),
             "auto_misses": data.get("auto_misses"),
+            "auto_human_scores": data.get("auto_human_score"),
+            "auto_human_misses": data.get("auto_human_misses"),
+            "taxied": bool(data.get("taxied")),
             "auto_notes": data.get("auto_notes"),
             "teleop_lower_hub": data.get("teleop_lower_hub"),
             "teleop_upper_hub": data.get("teleop_upper_hub"),
@@ -192,18 +195,24 @@ def add_team_datum():
             "from_terminal": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
             "from_hangar_zone": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
             "from_elsewhere_on_field": True if '5' in data.get("shooting_zones") else False, 
+            "auto_from_fender": True if '0' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_elsewhere_in_tarmac": True if '1' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_launchpad": True if '2' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_terminal": True if '3' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_hangar_zone": True if '4' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_elsewhere_on_field": True if '5' in data.get("auto_shooting_zones") else False, 
             "teleop_notes": data.get("teleop_notes"),
             "attempted_low": data.get("attempted_low"),
-            "low_rung_climb_time": data.get("low_rung_climb_time"),
+            "low_rung_climb_time": data.get("low_climb_time"),
             "attempted_mid": data.get("attempted_mid"),
-            "mid_rung_climb_time": data.get("mid_rung_climb_time"),
+            "mid_rung_climb_time": data.get("mid_climb_time"),
             "attempted_high": data.get("attempted_high"),
-            "high_rung_climb_time": data.get("high_rung_climb_time"),
+            "high_rung_climb_time": data.get("high_climb_time"),
             "attempted_traversal": data.get("attempted_traversal"),
-            "traversal_rung_climb_time": data.get("traversal_rung_climb_time"),
+            "traversal_rung_climb_time": data.get("traversal_climb_time"),
+            "defense": data.get("defense_time"),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
-    data_accessor.engine.dispose()
     return ""
 
 @app.route("/api/add_prediction", methods=["POST"])
@@ -221,7 +230,7 @@ def change_warning():
     update_data_accessor(data_accessor)
     data = request.args
     data_accessor.update_warning(
-        id = data["warning_id"],
+        id = int(data["warning_id"]),
         ignore = bool(data["ignore"])
     )
     data_accessor.engine.dispose()

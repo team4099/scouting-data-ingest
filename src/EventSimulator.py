@@ -1,40 +1,27 @@
+from copy import copy, deepcopy
 import json
 from datetime import datetime
 
-import gspread
 import pandas as pd
 from flask import Flask, make_response, render_template, request
 from pytz import timezone
+import pytz
 from Config import Config
 from loguru import logger
+import requests
+import sys
 
 app = Flask(__name__)
-currMatch = 1
+lastMatch = 0
+currMatch = 0
 config = Config(logger, simulation=True)
-gc = gspread.service_account(f'./config/{config.google_credentials}')
-sim_file = gc.open(f'{config.simulator_spreadsheet}')
 
-if "Data Worksheet" not in [i.title for i in sim_file.worksheets()]:
-    # They've not run the "new" (as of 5/7/21) version so add it
-    main_sheet = gc.open(f'{config.spreadsheet}').get_worksheet(0)
-    main_data = pd.DataFrame(main_sheet.get_all_records())
-    new_sheet = sim_file.add_worksheet(
-        "Data Worksheet", rows=main_sheet.row_count, cols=main_sheet.col_count
-    )
-    new_sheet.update(
-        "A1", [main_data.columns.values.tolist()] + main_data.values.tolist()
-    )
-    new_sheet.freeze(rows=1)
-
-orig_sheet = sim_file.worksheet("Data Worksheet")
-orig_data = pd.DataFrame(orig_sheet.get_all_records())
-sim_sheet = gc.open(f'{config.simulator_spreadsheet}').get_worksheet(0)
-
-with open("./data/2020vahay.json") as f:
+with open("./data/2022week0.json") as f:
     data = f.read()
     all_matches = json.loads(data)
+    all_matches = sorted(all_matches,key=lambda x: x["post_result_time"])
     max_matches = len(all_matches)
-    not_played_matches = json.loads(data)
+    not_played_matches = deepcopy(all_matches)
     for match in not_played_matches:
         match["alliances"]["red"]["score"] = 0
         match["alliances"]["blue"]["score"] = 0
@@ -44,8 +31,10 @@ with open("./data/2020vahay.json") as f:
         match["actual_time"] = 0
         match["score_breakdown"] = {}
 
+with open("./data/gen_data.json") as f:
+    team_datum = json.loads(f.read())
 
-lastModified = datetime.now(tz=timezone("GMT"))
+lastModified = pytz.timezone("GMT").localize(datetime.fromtimestamp(all_matches[currMatch]["post_result_time"] - 1), is_dst=None)
 
 
 @app.route("/matches")
@@ -90,11 +79,11 @@ def updateSheet(match):
         [match_dataframe.columns.values.tolist()] + match_dataframe.values.tolist(),
     )
     return None
-
-
+    
 @app.route("/form")
 def form():
     global currMatch
+    global lastMatch
     if int(request.args["match_num"]) < currMatch:
         return render_template(
             "eventsim.html",
@@ -103,9 +92,12 @@ def form():
             warning="Next match must be higher. Restart if you want to see what happens at a lower match number.",
         )
     currMatch = int(request.args["match_num"])
-    updateSheet(currMatch)
+    for match in range(lastMatch, currMatch):
+        for team_data in team_datum["2022week0_qm" + str(match + 1)]:
+            requests.post("http://localhost:5001/api/add_team_datum", json=team_data)
+    lastMatch = currMatch
     global lastModified
-    lastModified = datetime.now(tz=timezone("GMT"))
+    lastModified = pytz.timezone("GMT").localize(datetime.fromtimestamp(all_matches[lastMatch]["post_result_time"]), is_dst=None)
     return render_template("eventsim.html", count=currMatch, max_matches=max_matches)
 
 
@@ -115,5 +107,4 @@ def index():
 
 
 if __name__ == "__main__":
-    updateSheet(currMatch)
     app.run(host="0.0.0.0")

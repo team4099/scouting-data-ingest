@@ -81,7 +81,7 @@ class DataProcessor:
                     tba_val = DataProcessor.get(match, f"{color[0]}_{metric}", tba_default)
                     if team_val != tba_val:
                         warning_desc = f'<b>{match.match_id}{" " if len(match.match_id) < 14 else ""}</b> - <{color}>{color}</> - '
-                        warning = f'{team.team.id}\'s endgame status is recorded as <d><blue>{team_val.value}</></> while TBA has it as <d><blue>{tba_val.value}</></>'
+                        warning = f'{team.id}\'s endgame status is recorded as <d><blue>{team_val.value}</></> while TBA has it as <d><blue>{tba_val.value}</></>'
                         self.log.log("DATA", warning_desc + warning)
                         self.data_accessor.add_warning(match.match_id,Alliance(color),category,re.sub(self.clean_tags, '', warning))
         self.data_accessor.session.flush()
@@ -89,12 +89,12 @@ class DataProcessor:
 
     def check_key(self, category, key_name):
         for team_datum in self.team_data:
-            if not re.search(r"2020[a-z]{4,5}_(qm|sf|qf|f)\d{1,2}(m\d{1})*", DataProcessor.get(team_datum, key_name,"")):
+            if not re.search(r"2022[a-z]{4,5}_(qm|sf|qf|f)\d{1,2}(m\d{1})*", DataProcessor.get(team_datum, key_name,"")):
                 warning = (
                     f"Match Key in TeamData with id {team_datum.id} is not a proper key"
                 )
                 self.log.warning(warning)
-                self.data_accessor.add_warning(category=category,content=re.sub(self.clean_tags, '', warning))
+                self.data_accessor.add_warning(DataProcessor.get(team_datum, key_name,""), Alliance.red, category=category,content=re.sub(self.clean_tags, '', warning))
 
 
     def check_data(self):

@@ -75,6 +75,8 @@ class DataInput:
 
         self.log.info("Loading matches and teams")
         self.load_matches_and_teams()
+        self.data_accessor.session.commit()
+
 
         self.log.info("DataInput Loaded!")
 
@@ -113,12 +115,13 @@ class DataInput:
         self.log.info("Data successfully retrieved")
         self.tba_last_modified = r.headers["Last-Modified"]
         self.log.info("Normalizing and Cleaning Data")
-
         # Flatten the data and sort it so matches are entered in a sane way
         occurred_data = sorted(
             filter(lambda x: x["post_result_time"] > self.last_tba_time, r.json()),
             key=lambda x: x["post_result_time"],
         )
+        if len(occurred_data) == 0:
+            return
         self.last_tba_time = occurred_data[-1]["post_result_time"]
         self.last_tba_match = occurred_data[-1]["key"]
         matches = [flatten_json(i) for i in occurred_data]

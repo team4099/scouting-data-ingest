@@ -83,7 +83,6 @@ class DataManager:
         self.data_accessor.update_info("Task", "Getting Data")
         self.log.info(f"Getting data for {self.config.year + self.config.event}")
         self.data_input.get_tba_data()
-        self.data_input.get_sheet_data(self.config.year + self.config.event)
         self.session.commit()
 
     def check_data(self):
@@ -108,6 +107,7 @@ class DataManager:
 
         """
         self.data_accessor.update_info("Status", "Running")
+        self.data_accessor.session.commit()
         self.get_data()
         self.check_data()
         self.calculate_data()
