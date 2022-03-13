@@ -124,7 +124,7 @@ def get_match_keys():
 @app.route("/api/team_ids", methods=["GET"])
 def get_team_ids():
     return jsonify(
-        [team.serialize["team_id"] for team in data_accessor.get_warnings()]
+        [team.serialize["team_id"] for team in data_accessor.get_team()]
     )
 
 @app.route("/api/get_all_warnings", methods=["GET"])

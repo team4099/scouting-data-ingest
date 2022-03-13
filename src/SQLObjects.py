@@ -426,6 +426,13 @@ class TeamDatum(Base):
     def __repr__(self) -> str:
         return f"<TeamDatum id={self.id} team_id={self.team_id} match_id={self.match_id} alliance={self.alliance} driver_station={self.driver_station}>"
     
+    @property
+    def serialize(self):
+        return {
+            "team_id": self.team_id
+        }
+
+    
 
 
 class CalculatedTeamDatum(Base):
