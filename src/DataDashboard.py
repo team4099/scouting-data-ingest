@@ -20,7 +20,7 @@ from Config import Config
 from DataAccessor import DataAccessor
 from loguru import logger
 import json
-from SQLObjects import Alliance, Base
+from SQLObjects import Alliance, Base, Defense
 from flask_cors import CORS
 from waitress import serve
 
@@ -101,7 +101,7 @@ def get_match_data():
         )[match_id]
         jsonoutput[match_id]["currMatch"]["alliances"] = all_teams_for_match
         predictions_list = data_accessor.get_predictions(match_id=match_id)
-        jsonoutput[match_id]["currMatchData"]["predictions"] = [sum([1 for i in predictions_list if i.prediction == Alliance.red])/len(),sum([1 for i in predictions_list if i.prediction == Alliance.blue])/len()] #TODO figure out predictions
+        jsonoutput[match_id]["currMatchData"]["predictions"] = [sum([1 for i in predictions_list if i.prediction == Alliance.red])/(len(predictions_list) if len(predictions_list) else 1),sum([1 for i in predictions_list if i.prediction == Alliance.blue])/(len(predictions_list) if len(predictions_list) else 1)] #TODO figure out predictions
         jsonoutput[match_id]["team_metrics"] = {}
         for team_id in all_teams_for_match["red"]:
             jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
@@ -212,7 +212,7 @@ def add_team_datum():
             "high_rung_climb_time": data.get("high_climb_time"),
             "attempted_traversal": data.get("attempted_traversal"),
             "traversal_rung_climb_time": data.get("traversal_climb_time"),
-            "defense": data.get("defense_time"),
+            "defense": Defense(data.get("defense_time")),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
     return ""

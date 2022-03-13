@@ -320,7 +320,7 @@ class MatchDatum(Base):
     def serialize(self):
        """Return object data in easily serializable format"""
        return {
-           self.match_id: {
+            self.match_id: {
                "currMatch": {
                    "predictedTime": self.predicted_time,
                    "alliances": {
@@ -331,8 +331,7 @@ class MatchDatum(Base):
                "currMatchData": {
                    "postResultTime": self.post_result_time,
                    "predictions": [], # TODO figure out predictions
-               },
-                "Auto Low Cargo": {
+                   "Auto Low Cargo": {
                     "red": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.r_auto_cargo_lower_red,
                     "rlue": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.b_auto_cargo_lower_red
                 },
@@ -360,6 +359,8 @@ class MatchDatum(Base):
                    "red": self.r_total_points,
                    "blue": self.b_total_points
                }
+               },
+                
            }
        }
 
