@@ -501,8 +501,8 @@ class CalculatedTeamDatum(Base):
        return {
            self.team_id[3:] : {
                "accuracy": {
-                   "upper": self.teleop_upper_pct,
-                   "lower": self.teleop_lower_pct,
+                   "upper": self.teleop_upper_hub_pct,
+                   "lower": self.teleop_lower_hub_pct,
                    "miss": self.teleop_miss_pct
                },
                "auto": {
@@ -518,10 +518,10 @@ class CalculatedTeamDatum(Base):
                    "no_climb": self.none_pct
                },
                "climb_time" :{
-                    "low_rung_climb_time": self.low_rung_time_avg,
-                   "mid_rung_climb_time": self.mid_rung_climb_time,
-                   "high_rung_climb_time": self.high_rung_climb_time,
-                   "traversal_rung_climb_time": self.traversal_rung_climb_time,
+                   "low_rung_climb_time": self.low_rung_climb_time_avg,
+                   "mid_rung_climb_time": self.mid_rung_climb_time_avg,
+                   "high_rung_climb_time": self.high_rung_climb_time_avg,
+                   "traversal_rung_climb_time": self.traversal_rung_climb_time_avg,
                    
                },
                "attempted_climbs": {
