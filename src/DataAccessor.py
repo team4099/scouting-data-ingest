@@ -19,6 +19,7 @@ from SQLObjects import (
     Warning,
     Info,
     Scout,
+    PitScouting,
     Prediction,
     MatchDatum,
     TeamDatum,
@@ -208,6 +209,20 @@ class DataAccessor:
 
         return query.all() if query is not None else None
 
+    def get_pit_scouting_datum(
+        self,
+        team_id: Optional[str] = None,
+    ) -> Optional[List[PitScouting]]:
+        """
+        Get data from Pit Scouting for a given team or for all teams
+        """
+        query = self.session.query(PitScouting)
+        if team_id:
+            query = query.filter(PitScouting.team_id == team_id)
+        
+        return query.all() if query is not None else None
+
+
     def get_match_datum(
         self,
         match_id: Optional[str] = None,
@@ -296,6 +311,27 @@ class DataAccessor:
         if not self.get_team(id):
             t = Team(id=id)
             self.session.add(t)
+
+    def add_pit_scouting(
+        self,
+        team_id: str,
+        programming_language: str, #TODO figure out if we want to store as List of enums in code or separator (if it's purely used for front end stuff it honestly doesn't need to be converted imo)
+        num_of_batteries: int,
+        robot_info: str,
+        rungs: str,
+        other_info: str
+    ) -> None:
+        if not self.get_pit_scouting_datum(team_id):
+            self.session.add(
+                PitScouting(
+                    team_id = team_id,
+                    programming_language = programming_language,
+                    num_of_batteries = num_of_batteries,
+                    robot_info = robot_info,
+                    rungs = rungs,
+                    other_info = other_info
+                )
+            )
 
     def add_warning(
         self,
@@ -492,6 +528,34 @@ class DataAccessor:
     def update_prediction(self, scout_id: str, match_id: str, prediction: Alliance):
         prediction = self.get_predictions(scout_id, match_id)[0]
         prediction.prediction = prediction
+        self.session.commit()
+
+    def update_pit_scouting_datum(
+        self,
+        team_id: str,
+        programming_language: str = None,
+        num_of_batteries: int = None,
+        robot_info: str = None,
+        rungs: str = None,
+        other_info: str = None
+    ) -> None:
+        pit_scouting_datum = self.get_pit_scouting_datum(team_id=team_id)
+
+        if programming_language is not None:
+            pit_scouting_datum.programming_language = programming_language
+        
+        if num_of_batteries is not None:
+            pit_scouting_datum.num_of_batteries = num_of_batteries
+
+        if robot_info is not None:
+            pit_scouting_datum.robot_info = robot_info
+
+        if rungs is not None:
+            pit_scouting_datum.rungs = rungs
+
+        if other_info is not None:
+            pit_scouting_datum.other_info = other_info
+        
         self.session.commit()
 
     def update_scout(
