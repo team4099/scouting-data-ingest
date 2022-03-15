@@ -322,8 +322,7 @@ class DataAccessor:
         other_info: str
     ) -> None:
         if not self.get_pit_scouting_datum(team_id):
-            self.session.add(
-                PitScouting(
+            p = PitScouting(
                     team_id = team_id,
                     programming_language = programming_language,
                     num_of_batteries = num_of_batteries,
@@ -331,7 +330,7 @@ class DataAccessor:
                     rungs = rungs,
                     other_info = other_info
                 )
-            )
+            self.session.add(p)
 
     def add_warning(
         self,

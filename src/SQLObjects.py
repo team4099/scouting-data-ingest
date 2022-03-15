@@ -69,7 +69,7 @@ class Team(Base):
 
     team_data = relationship("TeamDatum", back_populates="team")
     calculated_team_data = relationship("CalculatedTeamDatum", back_populates="team")
-    pit_scouting = relationship("PitScouting", back_populates="team")
+    # pit_scouting = relationship("PitScouting", back_populates="team")
     alliance_associations = relationship("AllianceAssociation", back_populates="team")
 
     def __repr__(self) -> str:
@@ -175,13 +175,7 @@ class Info(Base):
 
 class PitScouting(Base):
     __tablename__ = "pit_scouting"
-    id = Column(String(20), primary_key=True)
-    team_id = Column(String(10), ForeignKey("teams.id"))
-    team = relationship(
-        "Team",
-        foreign_keys = [team_id],
-        back_populates="pit_scouting"
-    )
+    team_id = Column(String(10), primary_key = True) # TODO if this needs to be connected to teams figure out auto incrementing problem otherwise just keep it like this so it doesn't cause problems
     programming_language = Column(String(100)) #string with separator
     num_of_batteries = Column(Integer)
     robot_info = Column(String(100))
@@ -190,6 +184,18 @@ class PitScouting(Base):
 
     def __repr__(self) -> str:
         return f"<Pit Scouting id = {self.id} team_id ={self.team_id} programming language = {self.programming_language} number of batteries = {self.num_of_batteries} robot information = {self.robot_info} rungs = {self.rungs} other information = {self.other_info}"
+    
+    @property
+    def serialize(self):
+        return {
+            self.team_id: {
+                "programming_languages": self.programming_language,
+                "num_of_batteries": self.num_of_batteries,
+                "robot_info": self.robot_info,
+                "rungs": self.robot_info,
+                "other_info": self.other_info
+            }
+        }
 
 
 class Scout(Base):

@@ -127,6 +127,13 @@ def get_team_ids():
         [team.serialize["team_id"] for team in data_accessor.get_team()]
     )
 
+@app.route("/api/pit_scouting_data", methods=["GET"])
+def get_pit_scouting():
+    return jsonify(
+        [pit_scouting_datum.serialize for pit_scouting_datum in data_accessor.get_pit_scouting_datum()]
+    )
+
+
 @app.route("/api/get_all_warnings", methods=["GET"])
 def get_all_warnings():
     all_warnings = [warning.serialize for warning in data_accessor.get_warnings()]
@@ -215,6 +222,19 @@ def add_team_datum():
             "defense": Defense(data.get("defense_time")),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
+    return ""
+
+@app.route("/api/add_pit_scouting_datum", methods=["POST"])
+def add_pit_scouting():
+    data = request.args
+    data_accessor.add_pit_scouting(
+        team_id = data["team_id"],
+        programming_language = data["programming_language"],
+        num_of_batteries = data["num_of_batteries"],
+        robot_info = data["robot_info"],
+        rungs = data["rungs"],
+        other_info = data["other_info"]
+    )
     return ""
 
 @app.route("/api/add_prediction", methods=["POST"])
