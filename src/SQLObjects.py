@@ -40,6 +40,13 @@ class Defense(enum.Enum):
     most_of_the_time = "most of the time"
     all_of_the_time = "all of the time"
 
+class ProgrammingLanguages(enum.Enum):
+    java = "Java"
+    cpp = "C++"
+    labview = "LabVIEW"
+    kotlin = "Kotlin"
+    python = "Python"
+
 
 # class ClimbType(enum.Enum):
 #     hang = "hang"
@@ -62,6 +69,7 @@ class Team(Base):
 
     team_data = relationship("TeamDatum", back_populates="team")
     calculated_team_data = relationship("CalculatedTeamDatum", back_populates="team")
+    pit_scouting = relationship("PitScouting", back_populates="team")
     alliance_associations = relationship("AllianceAssociation", back_populates="team")
 
     def __repr__(self) -> str:
@@ -164,6 +172,24 @@ class Info(Base):
         return {
             self.id: self.value
         }
+
+class PitScouting(Base):
+    __tablename__ = "pit_scouting"
+    id = Column(String(20), primary_key=True)
+    team_id = Column(String(10), ForeignKey("teams.id"))
+    team = relationship(
+        "Team",
+        foreign_keys = [team_id],
+        back_populates="pit_scouting"
+    )
+    programming_language = Column(Enum(ProgrammingLanguages))
+    num_of_batteries = Column(Integer)
+    robot_info = Column(String(100))
+    rungs = Column(Enum(ClimbType))
+    other_info = Column(String(100))
+
+    def __repr__(self) -> str:
+        return f"<Pit Scouting id = {self.id} team_id ={self.team_id} programming language = {self.programming_language} number of batteries = {self.num_of_batteries} robot information = {self.robot_info} rungs = {self.rungs} other information = {self.other_info}"
 
 
 class Scout(Base):

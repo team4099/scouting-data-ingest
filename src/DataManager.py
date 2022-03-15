@@ -47,7 +47,8 @@ class DataManager:
         self.connection = self.engine.connect()
 
         self.log.info("Erasing existing data")
-        self.connection.execute(f"drop table if exists alliance_associations")           
+        self.connection.execute(f"drop table if exists alliance_associations")
+        self.connection.execute(f"drop table if exists pit_scouting") 
         Base.metadata.drop_all(self.engine)
         self.session.commit()
         Base.metadata.create_all(self.engine)
