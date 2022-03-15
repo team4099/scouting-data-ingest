@@ -182,10 +182,10 @@ class PitScouting(Base):
         foreign_keys = [team_id],
         back_populates="pit_scouting"
     )
-    programming_language = Column(Enum(ProgrammingLanguages))
+    programming_language = Column(String(100)) #string with separator
     num_of_batteries = Column(Integer)
     robot_info = Column(String(100))
-    rungs = Column(Enum(ClimbType))
+    rungs = Column(String(100)) #string with separator
     other_info = Column(String(100))
 
     def __repr__(self) -> str:
