@@ -180,17 +180,13 @@ class DataAccessor:
     def get_scouts(
         self,
         scout_id: Optional[str] = None,
-        active: Optional[bool] = None,
     ) -> Optional[List[Scout]]:
         """
         Get a warning by id
         """
         query = self.session.query(Scout)
-        if id:
+        if scout_id is not None:
             query = query.filter(Scout.id == scout_id)
-        if active:
-            query = query.filter(Scout.active == active)
-
         return query.all() if query is not None else None
 
     def get_predictions(
@@ -358,12 +354,11 @@ class DataAccessor:
     def add_scout(
         self,
         id: str,
-        active: Optional[Boolean] = None,
         points: int = 0,
         streak: int = 0,
     ) -> None:
-        if not self.get_scouts(id, active):
-            s = Scout(id=id, active=active, points=points, streak=streak)
+        if not self.get_scouts(id):
+            s = Scout(id=id, points=points, streak=streak)
             self.session.add(s)
 
     def add_prediction(
@@ -492,7 +487,7 @@ class DataAccessor:
             new_vars = old_team_data.__dict__
             # Dynamically set Year specific items
             for key, value in calculated_team_datum_json.items():
-                if type(value) == Null or value != new_vars[key]:
+                if type(value) == Null or value != new_vars.get(key):
                     new_vars[key] = value
 
             old_team_data.__dict__.update(new_vars)

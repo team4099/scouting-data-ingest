@@ -201,20 +201,18 @@ class PitScouting(Base):
 class Scout(Base):
     __tablename__ = "scouts"
     id = Column(String(20), primary_key=True)
-    active = Column(Boolean, default=True)
     points = Column(Integer, default=0)
     streak = Column(Integer, default=0)
     predictions = relationship("Prediction", back_populates="scout")
     team_data = relationship("TeamDatum", back_populates="scout")
 
     def __repr__(self) -> str:
-        return f"<Scout id={self.id} active={self.active} points={self.points} streak={self.streak}>"
+        return f"<Scout id={self.id} points={self.points} streak={self.streak}>"
     
     @property
     def serialize(self):
         return {
             self.id: {
-                "active": self.active,
                 "points": self.points,
                 "streak": self.streak
             }
@@ -353,19 +351,14 @@ class MatchDatum(Base):
        """Return object data in easily serializable format"""
        return {
             self.match_id: {
-               "currMatch": {
-                   "predictedTime": self.predicted_time,
-                   "alliances": {
-                       "blue": [],
-                       "red": []    # TODO figure out if you can access data accessor fuctions in sql objects
-                   },
-               },
                "currMatchData": {
                    "postResultTime": self.post_result_time,
                    "predictions": [], # TODO figure out predictions
+                   "winner": self.winning_alliance.value,
+                   "metrics": {
                    "Auto Low Cargo": {
                     "red": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.r_auto_cargo_lower_red,
-                    "rlue": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.b_auto_cargo_lower_red
+                    "blue": self.r_auto_cargo_lower_near + self.r_auto_cargo_lower_far +self.r_auto_cargo_lower_blue +self.b_auto_cargo_lower_red
                 },
                 "Auto Upper Cargo": {
                     "red": self.r_auto_cargo_upper_near + self.r_auto_cargo_upper_far +self.r_auto_cargo_upper_blue +self.r_auto_cargo_upper_red,
@@ -390,7 +383,7 @@ class MatchDatum(Base):
                "Total Points": {
                    "red": self.r_total_points,
                    "blue": self.b_total_points
-               }
+               }}
                },
                 
            }
@@ -427,6 +420,7 @@ class TeamDatum(Base):
     auto_from_terminal = Column(Boolean)
     auto_from_hangar_zone = Column(Boolean)
     auto_from_elsewhere_on_field = Column(Boolean)
+    auto_from_opponent_tarmac = Column(Boolean)
     auto_notes = Column(Text)
 
     teleop_lower_hub = Column(Integer)
@@ -440,6 +434,7 @@ class TeamDatum(Base):
     from_terminal = Column(Boolean)
     from_hangar_zone = Column(Boolean)
     from_elsewhere_on_field = Column(Boolean)
+    from_opponent_tarmac = Column(Boolean)
 
     attempted_low = Column(Boolean)
     low_rung_climb_time = Column(Integer)
@@ -452,6 +447,7 @@ class TeamDatum(Base):
     final_climb_type = Column(Enum(ClimbType))
 
     defense = Column(Enum(Defense))
+    driver_rating = Column(Integer)
 
     notes = Column(Text)
 
@@ -505,6 +501,7 @@ class CalculatedTeamDatum(Base):
     from_terminal_usage = Column(Float)
     from_hangar_zone_usage = Column(Float)
     from_elsewhere_on_field_usage = Column(Float)
+    from_opponent_tarmac = Column(Float)
 
     auto_from_fender_usage = Column(Float)
     auto_from_elsewhere_in_tarmac_usage = Column(Float)
@@ -512,6 +509,7 @@ class CalculatedTeamDatum(Base):
     auto_from_terminal_usage = Column(Float)
     auto_from_hangar_zone_usage = Column(Float)
     auto_from_elsewhere_on_field_usage = Column(Float)
+    auto_from_opponent_tarmac = Column(Float)
 
     attempted_low_usage = Column(Float)
     attempted_mid_usage = Column(Float)
@@ -533,6 +531,7 @@ class CalculatedTeamDatum(Base):
     
 
     comments = Column(Text)
+    driver_rating_avg = Column(Float)
 
     @property
     def serialize(self):
@@ -583,7 +582,8 @@ class CalculatedTeamDatum(Base):
                    "launchpad": self.from_launchpad_usage,
                    "terminal": self.from_terminal_usage,
                    "hangar_zone": self.from_hangar_zone_usage,
-                   "elsewhere": self.from_elsewhere_on_field_usage
+                   "elsewhere": self.from_elsewhere_on_field_usage,
+                    "opponent": self.from_opponent_tarmac
                },
                "next_matches": [
                    

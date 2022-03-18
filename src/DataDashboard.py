@@ -27,6 +27,7 @@ from waitress import serve
 # send help I don't know how to organize a flask application
 
 app = Flask(__name__)
+app.debug = True
 CORS(app)
 app.config["SECRET_KEY"] = "Team4099!"
 config = Config(logger, False)
@@ -51,7 +52,7 @@ def update_data_accessor(data_accessor=None):
 engine = create_engine(f"mysql+pymysql://{config.db_user}:{config.db_pwd}@{config.db_host}/scouting")
 session_template = sessionmaker()
 session_template.configure(bind=engine)
-session = session_template()
+session = scoped_session(session_template)
 connection = engine.connect()
 data_accessor = DataAccessor(engine, session, connection, config)
 calculated_team_data_object = None
@@ -90,30 +91,44 @@ def get_status():
 
 @app.route("/api/get_match_data", methods=["GET"])
 def get_match_data():
-    all_matches = [match_object.serialize for match_object in data_accessor.get_match_datum()]
+    all_matches = [match for match in data_accessor.get_match()]
+    all_associations = data_accessor.get_alliance_associations(
+            dictionary = True
+        )
     jsonoutput = {}
     for match in all_matches:
+        all_teams_for_match = all_associations[match.id]
+        jsonoutput[match.id] = {"currMatch":{"alliances":all_teams_for_match}, "currMatchData":{},"team_metrics":{}}
+        for team_id in all_teams_for_match["red"]:
+            team_data = data_accessor.get_calculated_team_data(team_id = team_id)
+            if team_data is not None:
+                jsonoutput[match.id]["team_metrics"][team_id] = team_data.serialize[team_id[3:]]
+                jsonoutput[match.id]["team_metrics"][team_id]["alliance"] = "red"
+            else:
+                jsonoutput[match.id]["team_metrics"][team_id] = None
+        for team_id in all_teams_for_match["blue"]:
+            team_data = data_accessor.get_calculated_team_data(team_id = team_id)
+            if team_data is not None:
+                jsonoutput[match.id]["team_metrics"][team_id] = team_data.serialize[team_id[3:]]
+                jsonoutput[match.id]["team_metrics"][team_id]["alliance"] = "blue"
+            else:
+                jsonoutput[match.id]["team_metrics"][team_id] = None
+    all_match_data = [match_object.serialize for match_object in data_accessor.get_match_datum()]
+    for match in all_match_data:
         match_id = list(match.keys())[0] # i cannot think of a more efficient way to do this
-        jsonoutput[match_id] = match[match_id]
-        all_teams_for_match = data_accessor.get_alliance_associations(
-            match_id = match_id,
-            dictionary = True
-        )[match_id]
-        jsonoutput[match_id]["currMatch"]["alliances"] = all_teams_for_match
         predictions_list = data_accessor.get_predictions(match_id=match_id)
         jsonoutput[match_id]["currMatchData"]["predictions"] = [sum([1 for i in predictions_list if i.prediction == Alliance.red])/(len(predictions_list) if len(predictions_list) else 1),sum([1 for i in predictions_list if i.prediction == Alliance.blue])/(len(predictions_list) if len(predictions_list) else 1)] #TODO figure out predictions
-        jsonoutput[match_id]["team_metrics"] = {}
-        for team_id in all_teams_for_match["red"]:
-            jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
-            jsonoutput[match_id]["team_metrics"][team_id]["alliance"] = "red"
-        for team_id in all_teams_for_match["blue"]:
-            jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
-            jsonoutput[match_id]["team_metrics"][team_id]["alliance"] = "blue"
+
 
         # for team_id in list(itertools.chain(*list(all_teams_for_match.values()))):
         #     jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
 
     return jsonoutput
+
+@app.route("/api/teams_in_match", methods=["GET"])
+def teams_in_match():
+    return {(match.comp_level.value + str(match.match_number)):data_accessor.get_alliance_associations(match.id, dictionary=True)[match.id] for match in data_accessor.get_match()}
+
 
 @app.route("/api/match_keys", methods=["GET"])
 def get_match_keys():
@@ -124,7 +139,13 @@ def get_match_keys():
 @app.route("/api/team_ids", methods=["GET"])
 def get_team_ids():
     return jsonify(
-        [team.serialize["team_id"] for team in data_accessor.get_team()]
+        [team.id for team in data_accessor.get_team()]
+    )
+
+@app.route("/api/match_ids", methods=["GET"])
+def get_match_ids():
+    return jsonify(
+        [match.id for match in data_accessor.get_match()]
     )
 
 @app.route("/api/pit_scouting_data", methods=["GET"])
@@ -148,7 +169,7 @@ def get_all_scouts():
     all_scouts = [scout.serialize for scout in data_accessor.get_scouts()]
     jsonoutput = {}
     for scout in all_scouts:
-        scout_id = list(all_scouts.keys())[0]
+        scout_id = list(scout.keys())[0]
         jsonoutput[scout_id] = scout[scout_id]
     return jsonoutput
 
@@ -204,12 +225,14 @@ def add_team_datum():
             "from_terminal": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
             "from_hangar_zone": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
             "from_elsewhere_on_field": True if '5' in data.get("shooting_zones") else False, 
+            "from_opponent_tarmac": True if '6' in data.get("shooting_zones") else False, 
             "auto_from_fender": True if '0' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
             "auto_from_elsewhere_in_tarmac": True if '1' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
             "auto_from_launchpad": True if '2' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
             "auto_from_terminal": True if '3' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
             "auto_from_hangar_zone": True if '4' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_elsewhere_on_field": True if '5' in data.get("auto_shooting_zones") else False, 
+            "auto_from_elsewhere_on_field": True if '5' in data.get("auto_shooting_zones") else False,
+            "auto_from_opponent_tarmac": True if '6' in data.get("auto_shooting_zones") else False, 
             "teleop_notes": data.get("teleop_notes"),
             "attempted_low": data.get("attempted_low"),
             "low_rung_climb_time": data.get("low_climb_time"),
@@ -220,6 +243,7 @@ def add_team_datum():
             "attempted_traversal": data.get("attempted_traversal"),
             "traversal_rung_climb_time": data.get("traversal_climb_time"),
             "defense": Defense(data.get("defense_time")),
+            "driver_rating": data.get("driver_rating"),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
     return ""

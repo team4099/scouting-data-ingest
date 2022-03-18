@@ -277,6 +277,8 @@ class DataCalculator:
         mid_climb_time_avg = self.calculate_team_average_filter("mid_rung_climb_time","attempted_mid")
         high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
         traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
+        driver_rating_avg = self.calculate_team_average("driver_rating")
+
 
         self.log.info("Calculating medians")
         auto_lower_med = self.calculate_team_median("auto_lower_hub")
@@ -305,7 +307,8 @@ class DataCalculator:
                 "from_launchpad",
                 "from_terminal",
                 "from_hangar_zone",
-                "from_elsewhere_on_field"
+                "from_elsewhere_on_field",
+                "from_opponent_tarmac"
             ],
             replacements={True: 1, False: 0},
         )
@@ -316,7 +319,8 @@ class DataCalculator:
                 "auto_from_launchpad",
                 "auto_from_terminal",
                 "auto_from_hangar_zone",
-                "auto_from_elsewhere_on_field"
+                "auto_from_elsewhere_on_field",
+                "auto_from_opponent_tarmac"
             ],
             replacements={True: 1, False: 0},
         )
@@ -368,6 +372,7 @@ class DataCalculator:
                 attempted_climbs_pct,
                 climb_type_pct,
                 shoot_pct,
+                driver_rating_avg,
                 comments,
             ],
             {
