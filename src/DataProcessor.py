@@ -113,7 +113,10 @@ class DataProcessor:
         self.alliance_data = [[[None, None, None] for j in range(2)] for i in range(len(self.match_data))]
 
         for team_datum in self.team_data:
-            self.alliance_data[team_datum.match.match_number - 1][0 if team_datum.alliance == Alliance.red else 1][team_datum.driver_station - 1] = team_datum
+            try:
+                self.alliance_data[team_datum.match.match_number - 1][0 if team_datum.alliance == Alliance.red else 1][team_datum.driver_station - 1] = team_datum
+            except IndexError:
+                return
 
 
         self.log.info("Checking TeamData match keys")
