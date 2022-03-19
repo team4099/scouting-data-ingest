@@ -264,6 +264,7 @@ class DataAccessor:
         """
         Get a alliance association by id
         """
+        self.session.flush()
         query = (
             self.session.query(CalculatedTeamDatum)
             .filter(CalculatedTeamDatum.team_id == team_id)

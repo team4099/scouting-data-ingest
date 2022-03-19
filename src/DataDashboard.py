@@ -91,34 +91,18 @@ def get_status():
 
 @app.route("/api/get_match_data", methods=["GET"])
 def get_match_data():
-    all_matches = [match for match in data_accessor.get_match()]
     all_associations = data_accessor.get_alliance_associations(
             dictionary = True
         )
     jsonoutput = {}
-    for match in all_matches:
-        all_teams_for_match = all_associations[match.id]
-        jsonoutput[match.id] = {"currMatch":{"alliances":all_teams_for_match}, "currMatchData":{},"team_metrics":{}}
-        for team_id in all_teams_for_match["red"]:
-            team_data = data_accessor.get_calculated_team_data(team_id = team_id)
-            if team_data is not None:
-                jsonoutput[match.id]["team_metrics"][team_id] = team_data.serialize[team_id[3:]]
-                jsonoutput[match.id]["team_metrics"][team_id]["alliance"] = "red"
-            else:
-                jsonoutput[match.id]["team_metrics"][team_id] = None
-        for team_id in all_teams_for_match["blue"]:
-            team_data = data_accessor.get_calculated_team_data(team_id = team_id)
-            if team_data is not None:
-                jsonoutput[match.id]["team_metrics"][team_id] = team_data.serialize[team_id[3:]]
-                jsonoutput[match.id]["team_metrics"][team_id]["alliance"] = "blue"
-            else:
-                jsonoutput[match.id]["team_metrics"][team_id] = None
     all_match_data = [match_object.serialize for match_object in data_accessor.get_match_datum()]
     for match in all_match_data:
         match_id = list(match.keys())[0] # i cannot think of a more efficient way to do this
+        all_teams_for_match = all_associations[match_id]
+        jsonoutput[match_id] = {"currMatch":{"alliances":all_teams_for_match}, "currMatchData":{}}
         predictions_list = data_accessor.get_predictions(match_id=match_id)
         jsonoutput[match_id]["currMatchData"]["predictions"] = [sum([1 for i in predictions_list if i.prediction == Alliance.red])/(len(predictions_list) if len(predictions_list) else 1),sum([1 for i in predictions_list if i.prediction == Alliance.blue])/(len(predictions_list) if len(predictions_list) else 1)] #TODO figure out predictions
-
+        jsonoutput[match_id]["currMatchData"] = match[match_id]["currMatchData"]
 
         # for team_id in list(itertools.chain(*list(all_teams_for_match.values()))):
         #     jsonoutput[match_id]["team_metrics"][team_id] = data_accessor.get_calculated_team_data(team_id = team_id).serialize[team_id[3:]]
@@ -146,6 +130,12 @@ def get_team_ids():
 def get_match_ids():
     return jsonify(
         [match.id for match in data_accessor.get_match()]
+    )
+
+@app.route("/api/occurred_match_ids", methods=["GET"])
+def get_occurred_match_ids():
+    return jsonify(
+        [match_data.match.id for match_data in data_accessor.get_match_datum()]
     )
 
 @app.route("/api/pit_scouting_data", methods=["GET"])
