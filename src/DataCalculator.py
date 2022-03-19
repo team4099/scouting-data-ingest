@@ -278,6 +278,8 @@ class DataCalculator:
         high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
         traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
         driver_rating_avg = self.calculate_team_average("driver_rating")
+        defense_time_avg = self.calculate_team_average("defense_time")
+
 
 
         self.log.info("Calculating medians")
@@ -373,6 +375,7 @@ class DataCalculator:
                 climb_type_pct,
                 shoot_pct,
                 driver_rating_avg,
+                defense_time_avg,
                 comments,
             ],
             {
