@@ -388,7 +388,7 @@ class DataAccessor:
         new_vars["set_number"] = match_json["set_number"]
         new_vars["match_number"] = match_json["match_number"]
         new_vars["set_number"] = match_json["set_number"]
-        new_vars["winning_alliance"] = Alliance(match_json["winning_alliance"])
+        new_vars["winning_alliance"] = Alliance(match_json["winning_alliance"]) if match_json["winning_alliance"] in ["red","blue"] else None
         new_vars["event_key"] = match_json["event_key"]
         new_vars["time"] = datetime.fromtimestamp(match_json["time"], pytz.utc)
         new_vars["actual_time"] = datetime.fromtimestamp(

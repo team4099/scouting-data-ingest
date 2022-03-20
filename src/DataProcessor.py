@@ -77,6 +77,8 @@ class DataProcessor:
         for match, alliances in zip(self.match_data, self.alliance_data):
             for alliance, color in zip(alliances, ["red", "blue"]):
                 for team, metric in zip(alliance, match_metrics):
+                    if team is None:
+                        continue
                     team_val = DataProcessor.get(team, team_metric, team_default)
                     tba_val = DataProcessor.get(match, f"{color[0]}_{metric}", tba_default)
                     if team_val != tba_val:

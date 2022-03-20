@@ -278,7 +278,7 @@ class DataCalculator:
         high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
         traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
         driver_rating_avg = self.calculate_team_average("driver_rating")
-        defense_time_avg = self.calculate_team_average("defense_time")
+        defense_time_avg = self.calculate_team_average("defense")
 
 
 

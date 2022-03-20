@@ -27,9 +27,9 @@ from waitress import serve
 # send help I don't know how to organize a flask application
 
 app = Flask(__name__)
-app.debug = True
-CORS(app)
+CORS(app, CORS_ORIGINS="*")
 app.config["SECRET_KEY"] = "Team4099!"
+app.config['CORS_HEADERS'] = 'Content-Type'
 config = Config(logger, False)
 
 
@@ -174,7 +174,11 @@ def get_api_status():
 def get_team_datum(teamid):
     if len(teamid) < 3 or "frc" != teamid[0:3]:
         teamid = "frc" + teamid
-    return data_accessor.get_calculated_team_data(team_id = teamid).serialize
+    occurred_matches = [match_data.match.id for match_data in data_accessor.get_match_datum()]
+    team_matches = [{"key":alliance.match_id} for alliance in data_accessor.get_alliance_associations(team_id=teamid) if alliance.match_id not in occurred_matches]
+    data = data_accessor.get_calculated_team_data(team_id = teamid).serialize
+    data["next_matches"] = team_matches
+    return data
 
 
 # TODO write documentation on the correct POST request format :///
@@ -191,6 +195,10 @@ def add_team_datum():
         "3": "high",
         "4": "traversal"
     }
+    if not isinstance(data["auto_shooting_zones"],list):
+        data["auto_shooting_zones"] = [data["auto_shooting_zones"]]
+    if not isinstance(data["shooting_zones"],list):
+        data["shooting_zones"] = [data["shooting_zones"]]
     data_accessor.add_team_datum(
         team_id =  str(data.get("team_number")),
         scout_id = data.get("scout_id"),
@@ -199,14 +207,14 @@ def add_team_datum():
         driver_station = data.get("driver_station"),
         team_datum_json = {
             "preloaded_cargo": bool(data.get("preloaded_cargo")),
-            "auto_lower_hub": data.get("auto_lower_hub"),
+            "auto_lower_hub": data.get("auto_low_hub"),
             "auto_upper_hub": data.get("auto_upper_hub"),
             "auto_misses": data.get("auto_misses"),
             "auto_human_scores": data.get("auto_human_score"),
             "auto_human_misses": data.get("auto_human_misses"),
             "taxied": bool(data.get("taxied")),
             "auto_notes": data.get("auto_notes"),
-            "teleop_lower_hub": data.get("teleop_lower_hub"),
+            "teleop_lower_hub": data.get("teleop_low_hub"),
             "teleop_upper_hub": data.get("teleop_upper_hub"),
             "teleop_misses": data.get("teleop_misses"),
             "from_fender": True if '0' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
@@ -226,7 +234,7 @@ def add_team_datum():
             "teleop_notes": data.get("teleop_notes"),
             "attempted_low": data.get("attempted_low"),
             "low_rung_climb_time": data.get("low_climb_time"),
-            "attempted_mid": data.get("attempted_mid"),
+            "attempted_mid": data.get("attemped_mid"),
             "mid_rung_climb_time": data.get("mid_climb_time"),
             "attempted_high": data.get("attempted_high"),
             "high_rung_climb_time": data.get("high_climb_time"),
@@ -236,6 +244,7 @@ def add_team_datum():
             "driver_rating": data.get("driver_rating"),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
+    data_accessor.session.commit()
     return ""
 
 @app.route("/api/add_pit_scouting_datum", methods=["POST"])

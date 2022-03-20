@@ -14,7 +14,7 @@ services:
             
     scouting-data-ingest:
         build: .
-        # command: python -m EventSimulator
+        command: [sh, -c, "python -m main --refresh-time 600 & (sleep 10s && python -m DataDashboard)"]
         stdin_open: true
         ports:
             - 5000:5000
@@ -23,20 +23,20 @@ services:
         volumes:
             - ./src/:/code
         environment:
-            # MYSQL_HOST: scouting-data-ingest-test.ccjho2z8otts.us-east-2.rds.amazonaws.com
-            MYSQL_HOST: db
-            MYSQL_USER: root
-            MYSQL_PASSWORD: testinginstance
+            MYSQL_HOST: scouting-data-ingest-week4.ccjho2z8otts.us-east-2.rds.amazonaws.com
+            #MYSQL_HOST: db
+            MYSQL_USER: admin
+            MYSQL_PASSWORD: competition1
             # Replace [Key] in the following line with your TBA Key
-            TBA_KEY: jYJJpBCLvJhvs8OLWyMvSPdp1ckBomOoRjvQms6zfXnB8PSWpg8bU6iL5B8Vvlmu
+            TBA_KEY: oPvuWtX7QgdpPQmfKavrKeqjcgpxV4A0ayVe543hOaM9VFinQIcJzdQmX9OvYwuV
             SIM_URL: http://127.0.0.1:5000
-            YEAR: 2020
+            YEAR: 2022
             # Replace [File Name] in the following line with your Google Credentials File Name
             G_CRED: our-audio-273419-34a1bb6bb461.json
             G_SHEET: Scouting Data Collection (Responses)
             # Replace [Name] in the following line with your name
             SIM_SHEET: Scouting Data Collection (Responses) - Kandasamy Chokkalingam
-            EVENT: vahay
+            EVENT: dc319
         depends_on:
             - db
 

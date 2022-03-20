@@ -22,4 +22,4 @@ dm = DataManager(
 if simulation:
     dm.start()
 else:
-    dm.refresh()
+    dm.start()

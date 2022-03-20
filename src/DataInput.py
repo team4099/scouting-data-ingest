@@ -113,11 +113,12 @@ class DataInput:
             self.log.info("TBA has not been changed. It will not be updated.")
             return r.status_code
         self.log.info("Data successfully retrieved")
-        self.tba_last_modified = r.headers["Last-Modified"]
+        if (changed := r.headers.get("Last-Modified")) is not None:
+            self.tba_last_modified = changed
         self.log.info("Normalizing and Cleaning Data")
         # Flatten the data and sort it so matches are entered in a sane way
         occurred_data = sorted(
-            filter(lambda x: x["post_result_time"] > self.last_tba_time, r.json()),
+            filter(lambda x: x["post_result_time"] is not None and x["post_result_time"] > self.last_tba_time, r.json()),
             key=lambda x: x["post_result_time"],
         )
         if len(occurred_data) == 0:
@@ -189,7 +190,7 @@ class DataInput:
             self.data_accessor.add_team_datum(
                 team_id=team_datum["Team Number"],
                 match_id=team_datum["Match Key"],
-                alliance=Alliance(team_datum["Alliance"].lower()),
+                alliance=Alliance(team_datum["Alliance"].lower()) if team_datum["Alliance"].lower() in ["red","blue"] else None,
                 driver_station=team_datum["Driver Station"],
                 team_datum_json=team_datum,
             )
