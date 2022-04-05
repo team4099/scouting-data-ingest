@@ -415,12 +415,12 @@ class TeamDatum(Base):
     auto_human_misses = Column(Integer)
     taxied = Column(Boolean)
     auto_from_fender = Column(Boolean)
-    auto_from_elsewhere_in_tarmac = Column(Boolean)
+    auto_from_opposing_fender = Column(Boolean)
+    auto_from_tarmac = Column(Boolean)
+    auto_from_opposing_tarmac = Column(Boolean)
     auto_from_launchpad = Column(Boolean)
     auto_from_terminal = Column(Boolean)
-    auto_from_hangar_zone = Column(Boolean)
-    auto_from_elsewhere_on_field = Column(Boolean)
-    auto_from_opponent_tarmac = Column(Boolean)
+    auto_from_elsewhere = Column(Boolean)
     auto_notes = Column(Text)
 
     teleop_lower_hub = Column(Integer)
@@ -429,12 +429,12 @@ class TeamDatum(Base):
     teleop_notes = Column(Text)
     
     from_fender = Column(Boolean)
-    from_elsewhere_in_tarmac = Column(Boolean)
+    from_opposing_fender = Column(Boolean)
+    from_tarmac = Column(Boolean)
+    from_opposing_tarmac = Column(Boolean)
     from_launchpad = Column(Boolean)
     from_terminal = Column(Boolean)
-    from_hangar_zone = Column(Boolean)
-    from_elsewhere_on_field = Column(Boolean)
-    from_opponent_tarmac = Column(Boolean)
+    from_elsewhere = Column(Boolean)
 
     attempted_low = Column(Boolean)
     low_rung_climb_time = Column(Integer)
@@ -447,6 +447,7 @@ class TeamDatum(Base):
     final_climb_type = Column(Enum(ClimbType))
 
     defense_pct = Column(Float)
+    counter_defense_pct = Column(Float)
     defense_rating = Column(Integer)
     counter_defense_rating = Column(Integer)
     driver_rating = Column(Integer)
@@ -498,20 +499,20 @@ class CalculatedTeamDatum(Base):
     traversal_rung_climb_time_med = Column(Float)
 
     from_fender_usage = Column(Float)
-    from_elsewhere_in_tarmac_usage = Column(Float)
+    from_opposing_fender_usage = Column(Float)
+    from_tarmac_usage = Column(Float)
+    from_opposing_tarmac_usage = Column(Float)
     from_launchpad_usage = Column(Float)
     from_terminal_usage = Column(Float)
-    from_hangar_zone_usage = Column(Float)
-    from_elsewhere_on_field_usage = Column(Float)
-    from_opponent_tarmac = Column(Float)
+    from_elsewhere_usage = Column(Float)
 
     auto_from_fender_usage = Column(Float)
-    auto_from_elsewhere_in_tarmac_usage = Column(Float)
+    auto_from_opposing_fender_usage = Column(Float)
+    auto_from_tarmac_usage = Column(Float)
+    auto_from_opposing_tarmac_usage = Column(Float)
     auto_from_launchpad_usage = Column(Float)
     auto_from_terminal_usage = Column(Float)
-    auto_from_hangar_zone_usage = Column(Float)
-    auto_from_elsewhere_on_field_usage = Column(Float)
-    auto_from_opponent_tarmac = Column(Float)
+    auto_from_elsewhere_usage = Column(Float)
 
     attempted_low_usage = Column(Float)
     attempted_mid_usage = Column(Float)
@@ -534,6 +535,7 @@ class CalculatedTeamDatum(Base):
 
     comments = Column(Text)
     defense_pct_avg = Column(Float)
+    counter_defense_pct_avg = Column(Float)
     defense_rating_avg = Column(Float)
     counter_defense_rating_avg = Column(Float)
     driver_rating_avg = Column(Float)
@@ -588,12 +590,12 @@ class CalculatedTeamDatum(Base):
                },
                "zones": {
                    "fender": self.from_fender_usage,
-                   "elsewhere_in_tarmac": self.from_elsewhere_in_tarmac_usage,
+                   "opposing_fender": self.from_opposing_fender_usage,
+                   "tarmac": self.from_tarmac_usage,
+                   "opposing_tarmac": self.from_opposing_tarmac_usage,
                    "launchpad": self.from_launchpad_usage,
                    "terminal": self.from_terminal_usage,
-                   "hangar_zone": self.from_hangar_zone_usage,
-                   "elsewhere": self.from_elsewhere_on_field_usage,
-                    "opponent": self.from_opponent_tarmac
+                   "elsewhere": self.from_elsewhere_usage
                },
                "next_matches": [
                    
@@ -663,11 +665,12 @@ team_data_map = {
     "teleop_misses": "Teleop Misses",
     "teleop_notes": "Teleop Notes",
     "from_fender": "Fender?",
-    "from_elsewhere_in_tarmac": "Elsewhere in Tarmac?",
+    "from_opposing_fender": "Opposing Fender?",
+    "from_tarmac": "Tarmac?",
+    "from_opposing_tarmac": "Opposing Tarmac?",
     "from_launchpad": "Launchpad?",
-    "from_terminal": "Terminal",
-    "from_hangar_zone": "Hangar Zone?",
-    "from_elsewhere_on_field": "Elsewhere on Field?",
+    "from_terminal": "Terminal?",
+    "from_elsewhere": "Elsewhere on Field?",
     "low_rung_climb_time": "Low Rung Climb Time",
     "mid_rung_climb_time": "Mid Rung Climb Time",
     "high_rung_climb_time": "High Rung Climb Time",

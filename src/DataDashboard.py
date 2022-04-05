@@ -218,19 +218,19 @@ def add_team_datum():
             "teleop_upper_hub": data.get("teleop_upper_hub"),
             "teleop_misses": data.get("teleop_misses"),
             "from_fender": True if '0' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_elsewhere_in_tarmac": True if '1' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_launchpad": True if '2' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_terminal": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_hangar_zone": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
-            "from_elsewhere_on_field": True if '5' in data.get("shooting_zones") else False, 
-            "from_opponent_tarmac": True if '6' in data.get("shooting_zones") else False, 
+            "from_opposing_fender": True if '1' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_tarmac": True if '2' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_opposing_tarmac": True if '3' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_launchpad": True if '4' in data.get("shooting_zones") else False, # TODO need to find a better way do do this
+            "from_terminal": True if '5' in data.get("shooting_zones") else False, 
+            "from_elsewhere": True if '6' in data.get("shooting_zones") else False, 
             "auto_from_fender": True if '0' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_elsewhere_in_tarmac": True if '1' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_launchpad": True if '2' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_terminal": True if '3' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_hangar_zone": True if '4' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
-            "auto_from_elsewhere_on_field": True if '5' in data.get("auto_shooting_zones") else False,
-            "auto_from_opponent_tarmac": True if '6' in data.get("auto_shooting_zones") else False, 
+            "auto_from_opposing_fender": True if '1' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_tarmac": True if '2' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_opposing_tarmac": True if '3' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_launchpad": True if '4' in data.get("auto_shooting_zones") else False, # TODO need to find a better way do do this
+            "auto_from_terminal": True if '5' in data.get("auto_shooting_zones") else False,
+            "auto_from_elsewhere": True if '6' in data.get("auto_shooting_zones") else False, 
             "teleop_notes": data.get("teleop_notes"),
             "attempted_low": data.get("attempted_low"),
             "low_rung_climb_time": data.get("low_climb_time"),
@@ -241,6 +241,7 @@ def add_team_datum():
             "attempted_traversal": data.get("attempted_traversal"),
             "traversal_rung_climb_time": data.get("traversal_climb_time"),
             "defense_pct": data.get("defense_pct"),
+            "counter_defense_pct": data.get("counter_defense_pct"),
             "defense_rating": data.get("defense_rating"),
             "counter_defense_rating": data.get("counter_defense_rating"),
             "driver_rating": data.get("driver_rating"),

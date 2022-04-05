@@ -278,6 +278,7 @@ class DataCalculator:
         high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
         traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
         defense_pct_avg = self.calculate_team_average("defense_pct")
+        counter_defense_pct_avg = self.calculate_team_average("counter_defense_pct")
         defense_rating_avg = self.calculate_team_average("defense_rating")
         counter_defense_rating_avg = self.calculate_team_average("counter_defense_rating")
         driver_rating_avg = self.calculate_team_average("driver_rating")
@@ -306,24 +307,24 @@ class DataCalculator:
         shooting_zone_pct = self.calculate_team_percentages(
             [
                 "from_fender",
-                "from_elsewhere_in_tarmac",
+                "from_opposing_fender",
+                "from_tarmac",
+                "from_opposing_tarmac",
                 "from_launchpad",
                 "from_terminal",
-                "from_hangar_zone",
-                "from_elsewhere_on_field",
-                "from_opponent_tarmac"
+                "from_elsewhere"
             ],
             replacements={True: 1, False: 0},
         )
         auto_shooting_zone_pct = self.calculate_team_percentages(
             [
                 "auto_from_fender",
-                "auto_from_elsewhere_in_tarmac",
+                "auto_from_opposing_fender",
+                "auto_from_tarmac",
+                "auto_from_opposing_tarmac",
                 "auto_from_launchpad",
                 "auto_from_terminal",
-                "auto_from_hangar_zone",
-                "auto_from_elsewhere_on_field",
-                "auto_from_opponent_tarmac"
+                "auto_from_elsewhere"
             ],
             replacements={True: 1, False: 0},
         )
@@ -376,6 +377,7 @@ class DataCalculator:
                 climb_type_pct,
                 shoot_pct,
                 defense_pct_avg,
+                counter_defense_pct_avg,
                 defense_rating_avg,
                 counter_defense_rating_avg,
                 driver_rating_avg,
@@ -383,17 +385,19 @@ class DataCalculator:
             ],
             {
                 "from_fender_pct": "from_fender_usage",
-                "from_elsewhere_in_tarmac_pct": "from_elsewhere_in_tarmac_usage",
+                "from_opposing_fender_pct": "from_opposing_fender_usage",
+                "from_tarmac_pct": "from_tarmac_usage",
+                "from_opposing_tarmac_pct": "from_opposing_tarmac_usage",
                 "from_launchpad_pct": "from_launchpad_usage",
                 "from_terminal_pct": "from_terminal_usage",
-                "from_hangar_zone_pct": "from_hangar_zone_usage",
-                "from_elsewhere_on_field_pct": "from_elsewhere_on_field_usage",
+                "from_elsewhere_pct": "from_elsewhere_usage",
                 "auto_from_fender_pct": "auto_from_fender_usage",
-                "auto_from_elsewhere_in_tarmac_pct": "auto_from_elsewhere_in_tarmac_usage",
+                "auto_from_opposing_fender_pct": "auto_from_opposing_fender_usage",
+                "auto_from_tarmac_pct": "auto_from_tarmac_usage",
+                "auto_from_opposing_tarmac_pct": "auto_from_opposing_tarmac_usage",
                 "auto_from_launchpad_pct": "auto_from_launchpad_usage",
                 "auto_from_terminal_pct": "auto_from_terminal_usage",
-                "auto_from_hangar_zone_pct": "auto_from_hangar_zone_usage",
-                "auto_from_elsewhere_on_field_pct": "auto_from_elsewhere_on_field_usage",
+                "auto_from_elsewhere": "auto_from_elsewhere_usage",
                 "attempted_low_pct": "attempted_low_usage",
                 "attempted_mid_pct":"attempted_mid_usage",
                 "attempted_high_pct": "attempted_high_usage",
