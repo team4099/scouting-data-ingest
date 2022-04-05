@@ -446,9 +446,9 @@ class TeamDatum(Base):
     traversal_rung_climb_time = Column(Integer)
     final_climb_type = Column(Enum(ClimbType))
 
-    # defense_pct = Column(Float)
-    # defense_rating = Column(Integer)
-    # counter_defense_rating = Column(Integer)
+    defense_pct = Column(Float)
+    defense_rating = Column(Integer)
+    counter_defense_rating = Column(Integer)
     driver_rating = Column(Integer)
 
     notes = Column(Text)
@@ -533,9 +533,9 @@ class CalculatedTeamDatum(Base):
     
 
     comments = Column(Text)
-    # defense_pct_avg = Column(Float)
-    # defense_rating_avg = Column(Float)
-    # counter_defense_rating = Column(Float)
+    defense_pct_avg = Column(Float)
+    defense_rating_avg = Column(Float)
+    counter_defense_rating_avg = Column(Float)
     driver_rating_avg = Column(Float)
 
     @property
@@ -580,6 +580,11 @@ class CalculatedTeamDatum(Base):
                    "upper": self.teleop_upper_hub_avg,
                    "lower": self.teleop_lower_hub_avg,
                    "misses": self.teleop_misses_avg
+               },
+               "defense": {
+                   "defense_time_pct": self.defense_pct_avg,
+                   "defense_rating": self.defense_rating_avg,
+                   "counter_defense_rating": self.counter_defense_rating_avg
                },
                "zones": {
                    "fender": self.from_fender_usage,

@@ -240,9 +240,9 @@ def add_team_datum():
             "high_rung_climb_time": data.get("high_climb_time"),
             "attempted_traversal": data.get("attempted_traversal"),
             "traversal_rung_climb_time": data.get("traversal_climb_time"),
-            # "defense_pct": data.get("defense_pct"),
-            # "defense_rating": data.get("defense_rating"),
-            # "counter_defense_rating": data.get("counter_defense_rating"),
+            "defense_pct": data.get("defense_pct"),
+            "defense_rating": data.get("defense_rating"),
+            "counter_defense_rating": data.get("counter_defense_rating"),
             "driver_rating": data.get("driver_rating"),
             "final_climb_type": climb_type_map[str(data.get("final_climb_type"))]
         })
