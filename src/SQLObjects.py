@@ -446,7 +446,9 @@ class TeamDatum(Base):
     traversal_rung_climb_time = Column(Integer)
     final_climb_type = Column(Enum(ClimbType))
 
-    defense = Column(Integer)
+    # defense_pct = Column(Float)
+    # defense_rating = Column(Integer)
+    # counter_defense_rating = Column(Integer)
     driver_rating = Column(Integer)
 
     notes = Column(Text)
@@ -531,7 +533,9 @@ class CalculatedTeamDatum(Base):
     
 
     comments = Column(Text)
-    defense_time_avg = Column(Float)
+    # defense_pct_avg = Column(Float)
+    # defense_rating_avg = Column(Float)
+    # counter_defense_rating = Column(Float)
     driver_rating_avg = Column(Float)
 
     @property

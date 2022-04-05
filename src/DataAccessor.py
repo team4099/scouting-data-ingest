@@ -12,6 +12,7 @@ from sqlalchemy.orm import load_only
 from SQLObjects import (
     Alliance,
     ClimbType,
+    Defense,
     CompLevel,
     Match,
     Team,
@@ -472,7 +473,6 @@ class DataAccessor:
             driver_station=driver_station,
         )
 
-        
         new_vars["final_climb_type"] = ClimbType(team_datum_json["final_climb_type"].lower())
 
         td.__dict__.update(team_datum_json)

@@ -262,6 +262,7 @@ class DataCalculator:
         """
         self.log.info("Getting a team list")
         self.team_list = self.data_accessor.get_all_teams_df()
+        print(self.team_list)
 
         if len(self.data_accessor.get_all_team_data_df().index) == 0:
             return
@@ -277,9 +278,10 @@ class DataCalculator:
         mid_climb_time_avg = self.calculate_team_average_filter("mid_rung_climb_time","attempted_mid")
         high_climb_time_avg = self.calculate_team_average_filter("high_rung_climb_time", "attempted_high")
         traversal_climb_time_avg = self.calculate_team_average_filter("traversal_rung_climb_time", "attempted_traversal")
+        # defense_pct_avg = self.calculate_team_average("defense_pct")
+        # defense_rating_avg = self.calculate_team_average("defense_rating")
+        # counter_defense_rating_avg = self.calculate_team_average("counter_defense_rating")
         driver_rating_avg = self.calculate_team_average("driver_rating")
-        defense_time_avg = self.calculate_team_average("defense")
-
 
 
         self.log.info("Calculating medians")
@@ -374,8 +376,10 @@ class DataCalculator:
                 attempted_climbs_pct,
                 climb_type_pct,
                 shoot_pct,
+                # defense_pct_avg,
+                # defense_rating_avg,
+                # counter_defense_rating_avg,
                 driver_rating_avg,
-                defense_time_avg,
                 comments,
             ],
             {
