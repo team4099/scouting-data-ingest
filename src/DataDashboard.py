@@ -293,9 +293,10 @@ def change_scout():
     )
     return ""
 
-@app.route("/api/add_scout/<id>", methods=["POST"])
+@app.route("/api/add_scout", methods=["POST"])
 def add_scout(id):
-    data_accessor.add_scout(id)
+    data = request.args
+    data_accessor.add_scout(data["scout_id"])
     return ""
 
 if __name__ == "__main__":
