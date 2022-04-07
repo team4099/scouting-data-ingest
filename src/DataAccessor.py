@@ -362,6 +362,7 @@ class DataAccessor:
         if not self.get_scouts(id):
             s = Scout(id=id, points=points, streak=streak)
             self.session.add(s)
+            self.session.commit()
 
     def add_prediction(
         self,
