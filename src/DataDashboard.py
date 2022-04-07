@@ -293,6 +293,10 @@ def change_scout():
     )
     return ""
 
+@app.route("/api/add_scout/<id>", methods=["POST"])
+def add_scout(id):
+    data_accessor.add_scout(id)
+    return ""
 
 if __name__ == "__main__":
     serve(app,host="0.0.0.0", port="5001")
